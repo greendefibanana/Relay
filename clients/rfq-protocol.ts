@@ -1038,10 +1038,15 @@ async function buildCommitMatchedOfferInstruction(
       assetRegistry: input.assetRegistry,
       buyerClearance: input.buyerClearance,
       escrowAuthority: input.escrowAuthority,
-      magicContext: PublicKey.findProgramAddressSync([Buffer.from("delegation"), input.assetRegistry.toBytes()], DELEGATION_PROGRAM_ID)[0],
+      magicContext: new PublicKey("MagicContext1111111111111111111111111111111"),
       magicProgram: new PublicKey("Magic11111111111111111111111111111111111111"),
     })
     .instruction();
+
+  const authIndex = instruction.keys.findIndex((k: any) => k.pubkey.equals(input.escrowAuthority));
+  if (authIndex >= 0) {
+    instruction.keys[authIndex].isSigner = true;
+  }
 
   return instruction;
 }
@@ -2017,7 +2022,7 @@ function componentIds() {
       ),
     ),
     matchOfferSystemId: new PublicKey(
-      env("MATCH_OFFER_SYSTEM_ID", "EBFD6GmoRdESWDBLfo7UnTT6yxvXwuashnJywwJTC87Y"),
+      env("MATCH_OFFER_SYSTEM_ID", "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585"),
     ),
     buyerClearanceComponentId: new PublicKey(
       env("BUYER_CLEARANCE_COMPONENT_ID", "6yM2Dkk6FiG8N9jQjtMQcDgsKNZDgc2J25K3muxVA8gz"),
@@ -3407,21 +3412,21 @@ export async function executeMatchOffer(
     {
       pubkey: new PublicKey(persistedListing.owner),
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     },
   ];
   if (protocolFeeBps > 0) {
     matchOfferExtraAccounts.push({
       pubkey: protocolTreasury,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     });
   }
   if (operatorFeeBps > 0) {
     matchOfferExtraAccounts.push({
       pubkey: operatorTreasury,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     });
   }
   matchOfferExtraAccounts.push({
@@ -3434,6 +3439,34 @@ export async function executeMatchOffer(
     isSigner: a.isSigner,
     isWritable: a.isWritable,
   })));
+  const escrowIndex = escrowIndexForListing(listingId);
+  const escrowFundingAmount = parseSafeInteger(
+    bidPrice + 1_000_000,
+    "escrowFundingAmount",
+  );
+
+  const commitMatchedOfferInstruction = await buildCommitMatchedOfferInstruction(
+    teeProvider,
+    {
+      payer: wallet.publicKey,
+      assetRegistry: state.assetRegistryPda,
+      buyerClearance: buyerClearancePda,
+      escrowAuthority: buyer,
+      bidPrice,
+      paymentRoutingPolicy: paymentPolicyState.policyPda,
+      protocolTreasury,
+      operatorTreasury,
+      escrowIndex,
+      teeValidator,
+    },
+  );
+  
+  const undelegateIx = createUndelegateInstruction({
+    payer: wallet.publicKey,
+    delegatedAccount: state.assetRegistryPda,
+    componentPda: ids.assetRegistryComponentId,
+  });
+
   let matchOfferTransaction = await buildMatchOfferTransaction(
     wallet.publicKey,
     state.world,
@@ -3445,6 +3478,8 @@ export async function executeMatchOffer(
     bidPrice,
     matchOfferExtraAccounts,
   );
+  matchOfferTransaction.add(undelegateIx, commitMatchedOfferInstruction);
+
   // Keep the operator wallet as fee payer for PER transactions.
   // The buyer still signs and funds settlement inside the system instruction.
   const matchOfferPayer = wallet.payer;
@@ -3488,20 +3523,9 @@ export async function executeMatchOffer(
     matchOfferTransaction = anchor.web3.Transaction.from(signedBuffer);
   }
 
-  const matchOfferPerSignature = await sendAndConfirmPerTransaction(
-    teeProvider.connection,
-    matchOfferPayer,
-    matchOfferTransaction,
-    undefined,
-    matchOfferAdditionalSigners,
-  );
-  const escrowIndex = escrowIndexForListing(listingId);
   const escrowAuthoritySigner =
     paymentSigner.publicKey.equals(buyer) ? paymentSigner : null;
-  const escrowFundingAmount = parseSafeInteger(
-    bidPrice + 1_000_000,
-    "escrowFundingAmount",
-  );
+
   const topUpEscrowSignature = await sendAndConfirmBaseTransaction(
     provider.connection,
     paymentSigner.keypair,
@@ -3514,33 +3538,15 @@ export async function executeMatchOffer(
       ),
     ),
   );
-  const commitMatchedOfferInstruction = await buildCommitMatchedOfferInstruction(
-    teeProvider,
-    {
-      payer: wallet.publicKey,
-      assetRegistry: state.assetRegistryPda,
-      buyerClearance: buyerClearancePda,
-      escrowAuthority: buyer,
-      bidPrice,
-      paymentRoutingPolicy: paymentPolicyState.policyPda,
-      protocolTreasury,
-      operatorTreasury,
-      escrowIndex,
-      teeValidator,
-    },
-  );
-  const undelegateIx = createUndelegateInstruction({
-    payer: wallet.publicKey,
-    delegatedAccount: state.assetRegistryPda,
-    componentPda: ids.assetRegistryComponentId,
-  });
 
-  let matchCommitSignature: string;
+  let matchOfferPerSignature: string;
   try {
-    matchCommitSignature = await sendAndConfirmPerTransaction(
+    matchOfferPerSignature = await sendAndConfirmPerTransaction(
       teeProvider.connection,
-      wallet.payer,
-      new Transaction().add(undelegateIx, commitMatchedOfferInstruction),
+      matchOfferPayer,
+      matchOfferTransaction,
+      undefined,
+      matchOfferAdditionalSigners,
     );
   } catch (error) {
     try {
@@ -3610,7 +3616,7 @@ export async function executeMatchOffer(
       explorerUrl: explorerUrl(matchAssetDelegateSignature, "tx"),
     },
     {
-      label: "Execute match_offer in TEE/PER",
+      label: "Match Offer and Settle Payment in TEE/PER",
       sig: matchOfferPerSignature,
       explorerUrl: explorerUrl(matchOfferPerSignature, "tx"),
     },
@@ -3618,11 +3624,6 @@ export async function executeMatchOffer(
       label: "Fund buyer Magic escrow on Solana",
       sig: topUpEscrowSignature,
       explorerUrl: explorerUrl(topUpEscrowSignature, "tx"),
-    },
-    {
-      label: "Commit matched offer and settle payment",
-      sig: matchCommitSignature,
-      explorerUrl: explorerUrl(matchCommitSignature, "tx"),
     },
   ];
   if (publishDealTermsOnChain) {

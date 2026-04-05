@@ -542,8 +542,7 @@ pub mod system_match_offer {
             ctx.accounts.magic_context.to_account_info(),
             ctx.accounts.magic_program.to_account_info(),
         )
-        .commit_and_undelegate(&[])
-        .add_post_commit_actions([settle_payment])
+        .add_standalone_actions([settle_payment])
         .build_and_invoke()?;
 
         Ok(())

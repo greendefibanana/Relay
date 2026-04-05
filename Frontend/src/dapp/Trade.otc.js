@@ -159,13 +159,15 @@ const TradeOtc = ({ closeHeader }) => {
     }
   }, [tradeId, getListingData]);
 
-  const completeStep = (steps, index, sig, url) =>
-    steps.map((s, i) => {
+  const completeStep = (steps, index, sig, url) => {
+    if (!steps) return [];
+    return steps.map((s, i) => {
       if (i < index) return { ...s, status: "done" };
       if (i === index) return { ...s, status: "done", sig, explorerUrl: url };
       if (i === index + 1) return { ...s, status: "active" };
       return s;
     });
+  };
 
   const runStepSequence = async ({ result, setSteps }) => {
     setSteps((prev) => completeStep(prev, 0, result.steps[0].sig, result.steps[0].explorerUrl));
