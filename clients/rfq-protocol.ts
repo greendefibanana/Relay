@@ -728,9 +728,12 @@ async function buildTeeProvider(wallet: LocalWallet): Promise<anchor.AnchorProvi
     return providerFor(new Connection(teeRpcUrl, "confirmed"), wallet);
   }
 
-  const isVerified = await verifyTeeRpcIntegrityNode(teeRpcUrl);
-  if (!isVerified) {
-    throw new Error("TEE attestation failed.");
+  const skipVerification = process.env.SKIP_TEE_VERIFICATION === "true";
+  if (!skipVerification) {
+    const isVerified = await verifyTeeRpcIntegrityNode(teeRpcUrl);
+    if (!isVerified) {
+      throw new Error("TEE attestation failed.");
+    }
   }
 
   const token = await getAuthTokenNode(

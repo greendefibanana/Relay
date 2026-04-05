@@ -23,7 +23,7 @@ system_match_offer = "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "C:/Users/ezevi/.config/solana/id.json"
 
 [workspace]
@@ -31,3 +31,9 @@ members = ["programs-ecs/components/asset_registry", "programs-ecs/components/bu
 
 [scripts]
 shielded-rfq = "npx tsx clients/shielded-rfq.ts"
+
+[test.validator]
+url = "https://api.devnet.solana.com"
+
+[[test.validator.clone]]
+address = "WorLD15A7CrDwLcLy4fRqtaTb9fbd8o8iqiEMUDse2n"
