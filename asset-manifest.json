@@ -1,0 +1,21 @@
+{
+  "files": {
+    "main.css": "/Relay/static/css/main.0558b940.css",
+    "main.js": "/Relay/static/js/main.79fc9fdb.js",
+    "static/js/787.4b4fa275.chunk.js": "/Relay/static/js/787.4b4fa275.chunk.js",
+    "static/media/hero_bg.png": "/Relay/static/media/hero_bg.e7566f383bb990a6d55b.png",
+    "static/media/work-in-progress.png": "/Relay/static/media/work-in-progress.c3061b9734ab05d247b3.png",
+    "static/media/firework.png": "/Relay/static/media/firework.857fcc2986c831dd2c8b.png",
+    "static/media/heroLogo.png": "/Relay/static/media/heroLogo.2b1ebdf99de89fde6640.png",
+    "static/media/hero_spiral.png": "/Relay/static/media/hero_spiral.e7e572cf0f67cbf5bb1b.png",
+    "static/media/transaction.png": "/Relay/static/media/transaction.435f47cc796e51996aae.png",
+    "index.html": "/Relay/index.html",
+    "main.0558b940.css.map": "/Relay/static/css/main.0558b940.css.map",
+    "main.79fc9fdb.js.map": "/Relay/static/js/main.79fc9fdb.js.map",
+    "787.4b4fa275.chunk.js.map": "/Relay/static/js/787.4b4fa275.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0558b940.css",
+    "static/js/main.79fc9fdb.js"
+  ]
+}
