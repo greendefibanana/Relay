@@ -42,3 +42,4 @@ jobs:
           folder: Frontend/build
           branch: gh-pages
           token: ${{ secrets.GITHUB_TOKEN }}
+          clean: true # Ensures a fresh deploy every time
