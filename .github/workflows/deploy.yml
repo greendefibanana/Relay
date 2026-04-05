@@ -21,13 +21,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Match package.json
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: Frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: ./Frontend
-        run: npm ci --engine-strict=false
+        run: npm install --engine-strict=false
 
       - name: Build
         working-directory: ./Frontend

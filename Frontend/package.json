@@ -5,8 +5,8 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": "24.11.1",
-    "npm": "11.6.2"
+    "node": ">=22",
+    "npm": ">=10"
   },
   "dependencies": {
     "@nextui-org/react": "^2.1.13",
