@@ -1,0 +1,514 @@
+.setupTrade{
+    // border: 1px solid red;
+    width: 60%;
+    // height: 400px;
+    margin: 1rem auto;
+    background-color: #161B2B;
+    border-radius: 10px;
+    padding: 2rem 1.5rem;
+
+    &_title{
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+
+        & h5{
+            font-family: var(--raleway);
+            color: #E1E1E3;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        &_right{
+            display: flex;
+            align-items: center;
+
+            & h6{
+                font-family: var(--raleway);
+                color: #E1E1E3;
+                font-weight: 700;
+                font-size: .8rem;
+            }
+
+            &_switch{
+                margin-left: .5rem;
+                width: 3rem;
+                border-radius: 400px;
+                height: 1.5rem;
+                transition: all .5s;
+                background-color: #373739;
+
+                &_div{
+                    cursor: pointer;
+                    width:55%;
+                    height:100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 400px;   
+                    background-color: white;
+                transition: all .5s;
+                }
+
+
+            }
+
+        }
+
+    }
+
+    &_main{
+        background-color: #0D1019;
+        display: flex;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        margin-top: 1.1rem;
+        justify-content: space-between;
+
+        & h5{
+            font-family: var(--syne);
+            color: #E1E1E3;
+        }
+
+        & h6{
+            font-family: var(--raleway);
+            color: #BBBEC6;
+            font-weight: 700;
+        }
+
+        & input{
+            max-width: 4rem;
+            text-align: center;
+            background-color: #0D1019;
+            color:#E1E1E3 ;
+            font-weight: 700;
+            font-family: var(--raleway);
+
+            &:focus{
+                outline: none;
+            }
+
+        }
+
+    }
+
+    &_list{
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+
+        &_ic{
+            margin-right: .5rem;
+            color: #BBBEC6;
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+
+        & h5{
+            color: #BBBEC6;
+            font-family: var(--syne);
+            font-weight: 500;
+        }
+
+    }
+
+    &_btn{
+        display: block;
+        background: var(--linearBg);
+        width: 100%;
+        margin-top: 1rem;
+        padding: .5rem;
+        border-radius: 8px;
+        font-family: var(--raleway);
+        font-weight: 600;
+        color: white;
+        font-size: .9rem;
+    }
+
+}
+
+
+// .sliderMain{
+//     position: fixed;
+//     right: 0rem;
+//     bottom:5rem;
+//     width: 20%;
+//     border-radius: 15px;
+//     background: var(--linearBg);
+//     z-index: 364647;
+//     padding: 2px;
+
+//     &_center{
+//         background-color: #161B2B;
+//         border-radius: 15px;
+//     }
+
+// }
+
+
+.sliderMain{
+    position: fixed;
+    right: 0rem;
+    bottom:5rem;
+    width: fit-content;
+    border-top-left-radius: 15px;
+    border-bottom-left-radius: 15px;
+    background: var(--linearBg);
+    z-index: 364647;
+    padding: 2px;
+    padding-right: 0;
+
+    &_center{
+        color: white;
+        background-color: #161B2B;
+        padding: 1rem;
+        font-weight: 800;
+        border-top-left-radius: 15px;
+        border-bottom-left-radius: 15px;
+    }
+
+}
+
+.sliderError{
+    position: fixed;
+    right: 0rem;
+    bottom:5rem;
+    width: fit-content;
+    background-color: #161B2B;
+    color: white;
+    padding: 1rem;
+    z-index: 364647;
+    font-family: var(--raleway);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .1s;
+    border-left: 2px solid red;
+    border-top: 2px solid red;
+    border-bottom: 2px solid red;
+    border-top-left-radius: 15px;
+    border-bottom-left-radius: 15px;
+}
+
+@media (max-width:1225px){
+
+    .setupTrade{
+        width: 70%;
+    }
+
+}
+
+
+@media (max-width:1006px){
+
+    .setupTrade{
+        width: 90%;
+    }
+
+}
+
+
+@media (max-width:650px){
+
+    .setupTrade{
+        width: 95%;
+        padding: 2rem 1rem;
+    }
+
+    .setupTrade_title{
+        flex-direction: column;
+
+        &_right{
+            margin-top: 1rem;
+        }
+
+    }
+
+    .setupTrade_list h5{
+        font-size: .7rem;
+    }
+
+    .setupTrade_main h5{
+        font-size: .7rem;
+    }
+
+    .setupTrade_main h6{
+        text-align: right;
+        font-size: .7rem;
+    }
+
+    .setupTrade_btn{
+        font-size: .8rem;
+    }
+
+}
+
+/* ── Section Cards (new form layout) ─────────────────────────────────────── */
+.setupTrade_section_card {
+  background-color: #0D1019;
+  border-radius: 10px;
+  padding: 1.25rem 1.25rem 0.5rem;
+  margin-top: 1.25rem;
+  border: 1px solid rgba(255,255,255,0.05);
+
+  &_title {
+    font-family: var(--syne);
+    color: #0097FF;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+}
+
+/* ── Labelled Fields ─────────────────────────────────────────────────────── */
+.setupTrade_field {
+  margin-bottom: 1rem;
+
+  &_label {
+    display: block;
+    font-family: var(--raleway);
+    color: #BBBEC6;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  &_value {
+    font-family: var(--raleway);
+    color: #E1E1E3;
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  &_input {
+    width: 100%;
+    background-color: #161B2B;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    color: #E1E1E3;
+    font-family: var(--raleway);
+    font-size: 0.85rem;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #0097FF;
+    }
+  }
+}
+
+/* ── Fee Preview ─────────────────────────────────────────────────────────── */
+.setupTrade_fee_preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 151, 255, 0.07);
+  border: 1px solid rgba(0, 151, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 1rem;
+  font-family: var(--raleway);
+  font-size: 0.8rem;
+  color: #BBBEC6;
+}
+
+.setupTrade_fee_value {
+  color: #14F195;
+  font-weight: 700;
+}
+
+/* ── Price row (input + unit badge) ─────────────────────────────────────── */
+.setupTrade_price_row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.setupTrade_price_unit_toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.setupTrade_price_unit_active {
+  font-family: var(--raleway);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #BBBEC6;
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.setupTrade_price_unit_sol {
+  font-family: var(--raleway);
+  font-size: 0.72rem;
+  color: #14F195;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── +30 days helper button ──────────────────────────────────────────────── */
+.setupTrade_helper_btn {
+  flex-shrink: 0;
+  background: rgba(0, 151, 255, 0.12);
+  border: 1px solid rgba(0, 151, 255, 0.3);
+  border-radius: 6px;
+  color: #0097FF;
+  font-family: var(--raleway);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(0, 151, 255, 0.22);
+  }
+}
+
+/* ── Vesting Timeline ────────────────────────────────────────────────────── */
+.vesting_timeline {
+  margin: 1.25rem 0;
+
+  &_bar {
+    position: relative;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
+    overflow: visible;
+  }
+
+  &_fill {
+    position: absolute;
+    inset: 0;
+    background: var(--linearBg);
+    border-radius: 99px;
+    opacity: 0.6;
+  }
+
+  &_cliff_marker {
+    position: absolute;
+    top: -3px;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    background: #f5a524;
+    border-radius: 50%;
+    border: 2px solid #0D1019;
+
+    &_label {
+      display: none;
+    }
+  }
+
+  &_labels {
+    display: flex;
+    margin-top: 0.6rem;
+    font-family: var(--raleway);
+    font-size: 0.68rem;
+    color: #BBBEC6;
+    position: relative;
+  }
+}
+
+/* ── Pre-match Checklist ─────────────────────────────────────────────────── */
+.trade_checklist {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+
+  &_title {
+    font-family: var(--raleway);
+    color: #BBBEC6;
+    font-size: 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  &_item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--raleway);
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+
+    &--done {
+      color: #14F195;
+    }
+  }
+
+  &_dot {
+    font-size: 0.85rem;
+    width: 1rem;
+    text-align: center;
+  }
+}
+
+/* ── Back link ───────────────────────────────────────────────────────────── */
+.trade_back_link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--raleway);
+  font-size: 0.8rem;
+  color: #BBBEC6;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #0097FF;
+  }
+}
+
+/* ── Clipboard copy button ───────────────────────────────────────────────── */
+.trade_copy_btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  color: #BBBEC6;
+  padding: 2px 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: #0097FF;
+    color: #0097FF;
+  }
+}
+
+/* ── Staking coming-soon banner ──────────────────────────────────────────── */
+.staking_coming_soon_banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  background: rgba(121, 0, 217, 0.1);
+  border: 1px solid rgba(121, 0, 217, 0.3);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  color: #c9a9ff;
+  font-family: var(--raleway);
+  width: 100%;
+
+  strong {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(201,169,255,0.7);
+  }
+}

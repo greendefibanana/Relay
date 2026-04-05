@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "062d0856c6d1d4b205e64886d54995bdf976ca6c"
+  },
+  "path_in_vcs": "crates/bolt-lang/attribute/system-input"
+}

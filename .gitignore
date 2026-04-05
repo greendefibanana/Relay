@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+target/
+.cargo-target/
+dist/
+build/
+**/build/
+.local-programs/
+*.so
+*.zip
+
+# Solana Test Ledgers (Huge state files)
+test-ledger-*/
+
+# Local State, Keys, and Secrets
+.env
+.devnet-*.json
+.relay-state.*.json
+*-keypair.json
+
+# Logs & Temporary Files
+*.log
+api-crash-logs.txt
+ephemeral-*.err.log
+ephemeral-*.out.log
+
+# Misc
+.anchor/
+.avm/
+

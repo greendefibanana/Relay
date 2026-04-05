@@ -1,0 +1,18 @@
+[package]
+name = "component_payment_routing_policy"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+test = false
+doctest = false
+
+[features]
+no-entrypoint = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+bolt-lang = { workspace = true }
+anchor-lang = { workspace = true }

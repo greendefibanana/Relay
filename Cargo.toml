@@ -1,0 +1,42 @@
+[workspace]
+members = [
+    "programs-ecs/components/asset_registry",
+    "programs-ecs/components/buyer_clearance",
+    "programs-ecs/components/deal_terms",
+    "programs-ecs/components/payment_routing_policy",
+    "programs-ecs/components/settlement_authority_policy",
+    "programs-ecs/systems/create_listing",
+    "programs-ecs/systems/attest_vesting_settlement",
+    "programs-ecs/systems/configure_payment_routing",
+    "programs-ecs/systems/configure_settlement_policy",
+    "programs-ecs/systems/issue_clearance",
+    "programs-ecs/systems/issue_transfer_consent",
+    "programs-ecs/systems/match_offer",
+    "programs-ecs/systems/cancel_listing",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+bolt-lang = "=0.2.4"
+anchor-lang = "=0.32.1"
+ephemeral-rollups-sdk = { version = "=0.10.0", features = ["anchor"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+
+[patch.crates-io]
+session-keys = { path = "vendor/session-keys" }
+bolt-attribute-bolt-delegate = { path = "vendor/bolt-attribute-bolt-delegate" }
+bolt-attribute-bolt-system-input = { path = "vendor/bolt-attribute-bolt-system-input" }
+bolt-attribute-bolt-system = { path = "vendor/bolt-attribute-bolt-system" }
+bolt-attribute-bolt-program = { path = "vendor/bolt-attribute-bolt-program" }
+
+[profile.dev]
+overflow-checks = true
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1

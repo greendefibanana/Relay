@@ -1,0 +1,356 @@
+// ── Dashboard page styles ─────────────────────────────────────────────────────
+
+.dash_page_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .Otc_main_txt {
+    margin-top: 0;
+  }
+}
+
+.dash_refresh_btn {
+  background: rgba(0, 151, 255, 0.1);
+  border: 1px solid rgba(0, 151, 255, 0.2);
+  color: #0097ff;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+
+  &:hover {
+    background: rgba(0, 151, 255, 0.18);
+    transform: rotate(60deg);
+  }
+}
+
+// ── Stat cards ────────────────────────────────────────────────────────────────
+.dash_stats_row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.dash_stat_card {
+  background: #111420;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--accent, #0097ff);
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: border-color 0.3s, transform 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent, #0097ff);
+    border-left-color: var(--accent, #0097ff);
+  }
+
+  &_icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--accent, #0097ff);
+    flex-shrink: 0;
+  }
+
+  &_info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &_value {
+    color: white;
+    font-family: var(--syne);
+    font-weight: 700;
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  &_label {
+    color: rgba(255, 255, 255, 0.45);
+    font-family: var(--raleway);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+  }
+}
+
+// ── Loading row ───────────────────────────────────────────────────────────────
+.dash_loading_row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 6rem;
+}
+
+// ── Section blocks ────────────────────────────────────────────────────────────
+.dash_section {
+  margin-top: 2.5rem;
+
+  &_title {
+    color: rgba(255, 255, 255, 0.5);
+    font-family: var(--raleway);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
+// ── Clearance row ─────────────────────────────────────────────────────────────
+.dash_clearance_row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dash_cta_link {
+  color: #0097ff;
+  font-family: var(--raleway);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #7900d9;
+  }
+}
+
+// ── My listings table ─────────────────────────────────────────────────────────
+.dash_my_listings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dash_my_listing_row {
+  background: #111420;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 0.9rem 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: border-color 0.3s;
+
+  &:hover {
+    border-color: rgba(0, 151, 255, 0.2);
+  }
+
+  &_left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &_info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &_type {
+    color: white;
+    font-family: var(--syne);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  &_meta {
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--raleway);
+    font-size: 0.75rem;
+  }
+
+  &_right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+}
+
+.dash_view_link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0097ff;
+  font-family: var(--raleway);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #7900d9;
+  }
+}
+
+.dash_cancel_btn {
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  color: #ff5050;
+  font-family: var(--raleway);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 80, 80, 0.18);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.dash_empty_state {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+
+  p {
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--raleway);
+    font-size: 0.9rem;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+// ── Activity feed ─────────────────────────────────────────────────────────────
+.dash_activity_list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.dash_activity_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s;
+  border-radius: 6px;
+  text-decoration: none;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &_left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &_right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.dash_activity_dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &--active  { background: #14F195; box-shadow: 0 0 5px #14F195; }
+  &--matched { background: #555; }
+}
+
+.dash_activity_type {
+  color: white;
+  font-family: var(--raleway);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dash_activity_per {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #0097ff;
+  background: rgba(0, 151, 255, 0.1);
+  border: 1px solid rgba(0, 151, 255, 0.25);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-family: var(--raleway);
+}
+
+.dash_activity_price {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.dash_see_all_link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #0097ff;
+  font-family: var(--raleway);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover { color: #7900d9; }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 640px) {
+  .dash_stats_row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dash_my_listing_row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dash_my_listing_row_right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 400px) {
+  .dash_stats_row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "shielded-rfq",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": "24.11.1",
+    "npm": "11.6.2"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types tests/request-validation.test.ts",
+    "test:frontend": "npm --prefix Frontend test -- --watchAll=false --runInBand",
+    "build:frontend": "npm --prefix Frontend run build",
+    "verify:prod-ready": "powershell -ExecutionPolicy Bypass -File scripts/verify-prod-ready.ps1",
+    "verify:e2e:artifact": "npx tsx scripts/write-e2e-verification-artifact.ts",
+    "build:client": "tsc -p tsconfig.json",
+    "rfq:run": "npx tsx clients/shielded-rfq.ts",
+    "dev:server": "npx tsx server/index.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@magicblock-labs/bolt-sdk": "^0.2.4",
+    "@magicblock-labs/ephemeral-rollups-sdk": "^0.2.6",
+    "@solana/wallet-adapter-react": "^0.15.39",
+    "@solana/web3.js": "^1.98.4",
+    "dotenv": "^16.4.7",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

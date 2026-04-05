@@ -1,0 +1,33 @@
+[toolchain]
+anchor_version = "0.32.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+component_asset_registry = "84rAQe7vMX8F8BevA9go8CWETc5FZJyKVgT5nowff81Z"
+component_buyer_clearance = "H9SDPiu38JtdPJaKueCnoAjjNBPHrfUxUgS95JPRPDM5"
+component_deal_terms = "23vDPBsuhfMEjmySL3p7DWTzXxX6j33xtaWj9VkbM5gg"
+component_payment_routing_policy = "Dwp5fQgx1CtVfUaPiQhEeKEr2RwXmkarJJxkMXDAw194"
+component_settlement_authority_policy = "DxV3D2u8LPiJVZTJT7EkoovhXok4uzxZHwDznXmchHvG"
+system_attest_vesting_settlement = "BrACdZTWSwNSwFexzUcPtobEB5wxMHXxW3Q9GR5i63Rc"
+system_configure_payment_routing = "Gnwd2U3g37AiZ5k4rphRnKHBx7UHujQupaE7XArMY8vt"
+system_configure_settlement_policy = "7WTkuFXzdtYdFJGKnFB2oWrViVVpqqtsscULaQo4DXLq"
+system_create_listing = "FgVyAJoCFkym9QjD8NsQ3SbHVkJEbECjYHJ7PpdetkCN"
+system_issue_clearance = "2e7rfeRKU33mGe9ZLRwNTnDKf8yRJttqPcbXgjX4UXxK"
+system_issue_transfer_consent = "ERJNXy2po3hrkGEJ3XM7hvMg3k2jRP1emb32voWvPNU9"
+system_match_offer = "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "C:/Users/ezevi/.config/solana/id.json"
+
+[workspace]
+members = ["programs-ecs/components/asset_registry", "programs-ecs/components/buyer_clearance", "programs-ecs/components/deal_terms", "programs-ecs/components/payment_routing_policy", "programs-ecs/components/settlement_authority_policy", "programs-ecs/systems/create_listing", "programs-ecs/systems/attest_vesting_settlement", "programs-ecs/systems/configure_payment_routing", "programs-ecs/systems/configure_settlement_policy", "programs-ecs/systems/issue_clearance", "programs-ecs/systems/issue_transfer_consent", "programs-ecs/systems/match_offer"]
+
+[scripts]
+shielded-rfq = "npx tsx clients/shielded-rfq.ts"

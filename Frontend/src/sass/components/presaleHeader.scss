@@ -1,0 +1,213 @@
+.presale_header{
+    width: 80%;
+    background-color: var(--header_bg_color);
+    padding: 1rem;
+    position: fixed;
+    top: 2rem;
+    left: 10%;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 20;
+
+    &_logo{
+        display: flex;
+        align-items: center;
+
+        &_img{
+            display: block;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        &_txt{
+            background: linear-gradient(268deg, #0097FF 1.13%, #7900D9 86.2%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-left: .6rem;
+            font-size: 1.3rem;
+            font-weight: 400;
+            font-family: var(--syne);
+        }
+
+    }
+
+    &_nav{
+
+        & a{
+
+            color: var(--white_color);
+            font-weight: 700;
+            font-size: .9rem;
+            font-family: var(--raleway);
+
+            &:not(:first-child){
+                margin-left: 2rem;
+            }
+
+        }
+
+    }
+
+    &_wallet{
+        // border: 2px solid;
+        border: none;
+        background-color: #111420;
+        color: white;
+        font-size: .9rem;   
+        font-family: var(--raleway);
+        position: relative;
+        border-radius: 7px;
+        padding: .5rem 2rem;
+        background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+        cursor: pointer;
+        line-height: 12px;
+
+        &::before{
+            content: "";
+            z-index: 1;
+            position: absolute;
+            display: block ;
+            width: 80%;
+            height: 70%;
+            top: 15%;
+            left: 10%;
+            filter: blur(15px);
+            opacity: 0;
+            background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+            transition: 0.3s opacity ease-in-out;
+        }
+
+        &:hover::before{
+            opacity: 1;
+            transition: 0.3s opacity ease-in-out;
+            filter: blur(25px);
+            background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+
+        }
+
+        &::after{
+            content: 'Open Dapp';
+            text-align: center;
+            line-height: 28px;
+            font-family: var(--raleway);
+            // font-weight: 900;
+            font-size: .9rem;
+            color: #fff;
+            font-weight: 700;
+            z-index: 5;
+            position: absolute;
+            display: block;
+            border-radius: 7px;
+            width: 98%;
+            height: 93%;
+            top:3.5%;
+            left: 1%;
+            background-color: rgb(19, 20, 22);
+        }
+
+    }
+
+    &_wallet2{
+        // border: 2px solid;
+        border: none;
+        background-color: #111420;
+        color: white;
+        font-size: .9rem;   
+        font-family: var(--raleway);
+        position: relative;
+        border-radius: 7px;
+        padding: .5rem 2rem;
+        background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+        cursor: pointer;
+        line-height: 12px;
+
+        &::before{
+            content: "";
+            z-index: 1;
+            position: absolute;
+            display: block ;
+            width: 80%;
+            height: 70%;
+            top: 15%;
+            left: 10%;
+            filter: blur(15px);
+            opacity: 0;
+            background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+            transition: 0.3s opacity ease-in-out;
+        }
+
+        &:hover::before{
+            opacity: 1;
+            transition: 0.3s opacity ease-in-out;
+            filter: blur(25px);
+            background: linear-gradient(45deg, rgba(0,151,255,1), #7900D9);
+
+        }
+
+        &::after{
+            content: 'Website';
+            text-align: center;
+            line-height: 28px;
+            font-family: var(--raleway);
+            // font-weight: 900;
+            font-size: .9rem;
+            color: #fff;
+            font-weight: 700;
+            z-index: 5;
+            position: absolute;
+            display: block;
+            border-radius: 7px;
+            width: 98%;
+            height: 93%;
+            top:3.5%;
+            left: 1%;
+            background-color: rgb(19, 20, 22);
+        }
+
+    }
+
+    &_menu{
+        display: none;
+    }
+
+}
+
+@media (max-width:650px){
+
+    .presale_header{
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        // border: 1px solid red;
+
+        &_nav{
+            display: none;
+        }
+
+        &_wallet{
+            display: none;
+        }
+
+        &_wallet2{
+            display: none;
+        }
+
+        &_menu{
+            display: block;
+            // border: 1px solid red;
+            padding: 0;
+
+            &_ic{
+                color: white;
+                width: 1.5rem;
+                height: 1.5rem;
+            }
+
+        }
+
+    }
+
+}

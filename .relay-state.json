@@ -1,0 +1,21 @@
+{
+  "world": "HmETAQXGXeWVL8nSfAkF1d9EyFJnH8MoehPCb9jRSF1Q",
+  "listings": [
+    {
+      "listingId": "1774438628",
+      "world": "HmETAQXGXeWVL8nSfAkF1d9EyFJnH8MoehPCb9jRSF1Q",
+      "sellerEntity": "6DxooNks5YDcvyuD6ssEFaKdZfqn5PDhgRKxV9VeQcmr",
+      "assetRegistryPda": "6ys5tXGR7N1iLLCcqp1pazTEf5dAvMzzCzhRaFZsEL4N",
+      "dealTermsPda": "Bt93MBDApimSiyae3QuPSNETuCdxaE2X6yr1481ATpLT",
+      "assetType": 1,
+      "minPrice": 900000,
+      "tokenAmount": 1000000000,
+      "valuationCap": 500000000,
+      "owner": "9BeBqNy15zt5mq112RrR35GaHNoqkPNFe1brhtEocdpU",
+      "isPrivate": false,
+      "recipient": null,
+      "isSold": false,
+      "updatedAt": "2026-03-25T11:37:28.928Z"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+[package]
+name = "relay_component_types"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["lib"]
+test = false
+doctest = false
+
+[dependencies]
+bolt-lang = "=0.2.4"
+anchor-lang = "=0.32.1"
