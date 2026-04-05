@@ -1022,7 +1022,9 @@ async function buildCommitMatchedOfferInstruction(
     teeValidator: PublicKey;
   },
 ): Promise<TransactionInstruction> {
-  const program = new anchor.Program(systemMatchOfferIdl as Idl, provider) as anchor.Program<any>;
+  const ids = componentIds();
+  const idl = { ...systemMatchOfferIdl, address: ids.matchOfferSystemId.toBase58() };
+  const program = new anchor.Program(idl as Idl, provider) as anchor.Program<any>;
   const instruction = await (program.methods as any)
     .commitMatchedOffer({
       bidPrice: new BN(input.bidPrice),
