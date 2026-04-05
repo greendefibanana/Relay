@@ -21,13 +21,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20' # Using current LTS for stability
           cache: 'npm'
           cache-dependency-path: Frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: ./Frontend
-        run: npm install --engine-strict=false
+        run: npm install --legacy-peer-deps --engine-strict=false
 
       - name: Build
         working-directory: ./Frontend
