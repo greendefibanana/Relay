@@ -70,5 +70,24 @@ export function usePhantomWallet() {
     return await window.solana.signTransaction(transaction);
   }, []);
 
-  return { publicKey, connected, connecting, hasPhantom, displayKey, connect, disconnect, signTransaction };
+  const signMessage = useCallback(async (message, display = "hex") => {
+    if (!window.solana?.isPhantom) throw new Error("Phantom not connected");
+    if (typeof window.solana.signMessage !== "function") {
+      throw new Error("Phantom message signing is unavailable");
+    }
+    const response = await window.solana.signMessage(message, display);
+    return response?.signature ?? response;
+  }, []);
+
+  return {
+    publicKey,
+    connected,
+    connecting,
+    hasPhantom,
+    displayKey,
+    connect,
+    disconnect,
+    signTransaction,
+    signMessage,
+  };
 }

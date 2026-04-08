@@ -20,7 +20,16 @@ function App() {
   const [openSideNav, setopenSideNav] = useState(false);
   const [preLoader, setpreLoader] = useState(true);
 
-  const { publicKey, connected, connecting, displayKey, connect, disconnect, signTransaction } = usePhantomWallet();
+  const {
+    publicKey,
+    connected,
+    connecting,
+    displayKey,
+    connect,
+    disconnect,
+    signTransaction,
+    signMessage,
+  } = usePhantomWallet();
 
   // Format address for display (already short from hook, but keep compat)
   const userWalletAddress = displayKey;
@@ -48,6 +57,7 @@ function App() {
           connecting,
           comingsoon: connect,
           signTransaction,
+          signMessage,
         }}
       >
         {preLoader ? (

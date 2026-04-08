@@ -4,7 +4,7 @@ import { IoCheckmarkCircle } from 'react-icons/io5';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 /**
- * TxStatusPanel – animated 3-step transaction progress display.
+ * TxStatusPanel – animated transaction progress display.
  * steps: [{ label, sig, explorerUrl, status: 'pending'|'active'|'done' }]
  */
 const TxStatusPanel = ({ steps, title = 'Transaction Progress', note }) => {
@@ -30,7 +30,7 @@ const TxStatusPanel = ({ steps, title = 'Transaction Progress', note }) => {
 
             <div className="txPanel_step_content">
               <h6 className="txPanel_step_label">{i + 1}. {step.label}</h6>
-              {step.status === 'done' && step.sig && (
+              {step.status === 'done' && step.sig && step.explorerUrl && (
                 <a
                   href={step.explorerUrl}
                   target="_blank"
@@ -42,7 +42,7 @@ const TxStatusPanel = ({ steps, title = 'Transaction Progress', note }) => {
                 </a>
               )}
               {step.status === 'active' && (
-                <span className="txPanel_step_loading">Broadcasting to Solana devnet…</span>
+                <span className="txPanel_step_loading">Processing transaction…</span>
               )}
             </div>
           </div>

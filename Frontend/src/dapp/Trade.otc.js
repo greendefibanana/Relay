@@ -22,7 +22,7 @@ import ClearanceBadge from "../components/ClearanceBadge";
 const MATCH_STEPS = [
   { label: "Delegate to PER", sig: null, explorerUrl: null, status: "pending" },
   { label: "Execute matchOffer in TEE / PER", sig: null, explorerUrl: null, status: "pending" },
-  { label: "Commit AssetRegistry to Solana", sig: null, explorerUrl: null, status: "pending" },
+  { label: "Finalize settlement", sig: null, explorerUrl: null, status: "pending" },
 ];
 
 const CLEARANCE_STEPS = [
@@ -159,22 +159,8 @@ const TradeOtc = ({ closeHeader }) => {
     }
   }, [tradeId, getListingData]);
 
-  const completeStep = (steps, index, sig, url) => {
-    if (!steps) return [];
-    return steps.map((s, i) => {
-      if (i < index) return { ...s, status: "done" };
-      if (i === index) return { ...s, status: "done", sig, explorerUrl: url };
-      if (i === index + 1) return { ...s, status: "active" };
-      return s;
-    });
-  };
-
   const runStepSequence = async ({ result, setSteps }) => {
-    setSteps((prev) => completeStep(prev, 0, result.steps[0].sig, result.steps[0].explorerUrl));
-    await new Promise((r) => setTimeout(r, 600));
-    setSteps((prev) => completeStep(prev, 1, result.steps[1].sig, result.steps[1].explorerUrl));
-    await new Promise((r) => setTimeout(r, 600));
-    setSteps((prev) => completeStep(prev, 2, result.steps[2].sig, result.steps[2].explorerUrl));
+    setSteps(result.steps.map((step) => ({ ...step, status: "done" })));
   };
 
   const generateClearanceHandler = async () => {
@@ -277,7 +263,11 @@ const TradeOtc = ({ closeHeader }) => {
     setTxSteps(initial);
 
     try {
-      const result = await matchOffer(tradeId, { buyer: user_account || null }, signTransaction);
+      const result = await matchOffer(
+        tradeId,
+        { buyer: user_account || null },
+        signTransaction,
+      );
       await runStepSequence({ result, setSteps: setTxSteps });
       setTxDone(true);
       setminiLoading(false);

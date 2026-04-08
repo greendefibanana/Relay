@@ -28,6 +28,7 @@ import {
   TransactionInstruction,
   VersionedTransaction,
 } from "@solana/web3.js";
+import type { AccountInfo } from "@solana/web3.js";
 import {
   confirmMagicTransaction,
   delegationRecordPdaFromDelegatedAccount,
@@ -320,7 +321,7 @@ function optionalEnv(name: string): string | null {
 
 function optionalPubkey(name: string): PublicKey | null {
   const value = optionalEnv(name);
-  return value ? new PublicKey(value) : null;
+  return value ? new PublicKey(value.trim()) : null;
 }
 
 function isLocalEphemeralRpc(rpcUrl: string): boolean {
@@ -408,7 +409,7 @@ function resolveConfiguredAuthorityPublicKey(
   }
 
   const configuredPubkey = optionalEnv(pubkeyEnv);
-  return configuredPubkey ? new PublicKey(configuredPubkey) : fallbackPublicKey;
+  return configuredPubkey ? new PublicKey(configuredPubkey.trim()) : fallbackPublicKey;
 }
 
 function resolveConfiguredSigner(
@@ -424,7 +425,7 @@ function resolveConfiguredSigner(
 
   const configuredPubkey = optionalEnv(pubkeyEnv);
   if (configuredPubkey) {
-    const publicKey = new PublicKey(configuredPubkey);
+    const publicKey = new PublicKey(configuredPubkey.trim());
     if (!publicKey.equals(fallbackKeypair.publicKey)) {
       throw new Error(
         `${pubkeyEnv} requires ${walletPathEnv} when it differs from WALLET_PATH.`,
@@ -451,6 +452,27 @@ function providerFor(connection: Connection, wallet: LocalWallet): anchor.Anchor
 
 export function explorerUrl(value: string, type: "address" | "tx" = "address"): string {
   return `https://explorer.solana.com/${type}/${value}?cluster=devnet`;
+}
+
+function perExplorerUrl(signature: string): string {
+  return `https://explorer.magicblock.app/tx/${signature}`;
+}
+
+function isExplorerSignature(value: string | null | undefined): value is string {
+  return Boolean(
+    value &&
+      !value.includes("already-") &&
+      !value.includes("kept-") &&
+      !value.includes("skipped-"),
+  );
+}
+
+function solanaTxExplorerUrl(signature: string | null | undefined): string | null {
+  return isExplorerSignature(signature) ? explorerUrl(signature, "tx") : null;
+}
+
+function perTxExplorerUrl(signature: string | null | undefined): string | null {
+  return isExplorerSignature(signature) ? perExplorerUrl(signature) : null;
 }
 
 function entitySeed(seed: string): Buffer {
@@ -482,7 +504,72 @@ function toPublicKey(value: string | PublicKey | null | undefined, fallback: Pub
   if (!value) {
     return fallback;
   }
-  return value instanceof PublicKey ? value : new PublicKey(value);
+  return value instanceof PublicKey ? value : new PublicKey(value.trim());
+}
+
+function canonicalizeOptionalPubkeyString(
+  value: string | null | undefined,
+  field: string,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return new PublicKey(trimmed).toBase58();
+  } catch {
+    throw new Error(`${field} must be a valid public key.`);
+  }
+}
+
+function rpcReadErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function isRetriableRpcReadError(error: unknown): boolean {
+  const message = rpcReadErrorMessage(error).toLowerCase();
+  return (
+    message.includes("fetch failed") ||
+    message.includes("failed to fetch") ||
+    message.includes("network request failed") ||
+    message.includes("socket hang up") ||
+    message.includes("econnreset") ||
+    message.includes("etimedout") ||
+    message.includes("429") ||
+    message.includes("too many requests")
+  );
+}
+
+async function getAccountInfoWithRetry(
+  connection: Connection,
+  address: PublicKey,
+  attempts = 4,
+): Promise<AccountInfo<Buffer> | null> {
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await connection.getAccountInfo(address);
+    } catch (error) {
+      lastError = error;
+      if (!isRetriableRpcReadError(error) || attempt === attempts) {
+        throw error;
+      }
+      await sleep(250 * attempt);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Failed to fetch account info for ${address.toBase58()}.`);
 }
 
 function generateSettlementProofId(): string {
@@ -633,7 +720,7 @@ async function readWorldMetadata(
   connection: Connection,
   world: PublicKey,
 ): Promise<WorldMetadata> {
-  const worldInfo = await connection.getAccountInfo(world);
+  const worldInfo = await getAccountInfoWithRetry(connection, world);
   if (!worldInfo) {
     throw new Error(`Unable to find world account: ${world.toBase58()}`);
   }
@@ -1043,9 +1130,12 @@ async function buildCommitMatchedOfferInstruction(
     })
     .instruction();
 
+  // The Magic program requires escrow_authority to SIGN the transaction,
+  // but it must NOT be writable (PER rejects writes to non-delegated accounts).
   const authIndex = instruction.keys.findIndex((k: any) => k.pubkey.equals(input.escrowAuthority));
   if (authIndex >= 0) {
     instruction.keys[authIndex].isSigner = true;
+    instruction.keys[authIndex].isWritable = false;
   }
 
   return instruction;
@@ -1072,7 +1162,7 @@ async function closeEphemeralBalanceIfPossible(
 
 async function ensureRegistry(provider: anchor.AnchorProvider): Promise<void> {
   const registryPda = FindRegistryPda({});
-  const registryInfo = await provider.connection.getAccountInfo(registryPda);
+  const registryInfo = await getAccountInfoWithRetry(provider.connection, registryPda);
   if (registryInfo) {
     return;
   }
@@ -1137,7 +1227,7 @@ async function findOrCreateEntity(
   const worldId = new BN(worldAccount.id.toString());
   const seed = entitySeed(seedLabel);
   const entityPda = FindEntityPda({ worldId, seed });
-  const entityInfo = await provider.connection.getAccountInfo(entityPda);
+  const entityInfo = await getAccountInfoWithRetry(provider.connection, entityPda);
   if (entityInfo) {
     return entityPda;
   }
@@ -1158,7 +1248,7 @@ async function findOrCreateComponent(
   componentId: PublicKey,
 ): Promise<PublicKey> {
   const componentPda = FindComponentPda({ componentId, entity });
-  const componentInfo = await provider.connection.getAccountInfo(componentPda);
+  const componentInfo = await getAccountInfoWithRetry(provider.connection, componentPda);
   if (componentInfo) {
     return componentPda;
   }
@@ -1176,7 +1266,7 @@ async function isDelegatedComponent(
   connection: Connection,
   componentPda: PublicKey,
 ): Promise<boolean> {
-  const accountInfo = await connection.getAccountInfo(componentPda);
+  const accountInfo = await getAccountInfoWithRetry(connection, componentPda);
   if (!accountInfo) {
     throw new Error(`Unable to find component account: ${componentPda.toBase58()}`);
   }
@@ -1189,7 +1279,7 @@ async function getDelegatedValidator(
   componentPda: PublicKey,
 ): Promise<PublicKey | null> {
   const delegationRecord = delegationRecordPdaFromDelegatedAccount(componentPda);
-  const accountInfo = await connection.getAccountInfo(delegationRecord);
+  const accountInfo = await getAccountInfoWithRetry(connection, delegationRecord);
   if (
     !accountInfo ||
     !accountInfo.owner.equals(new PublicKey(DELEGATION_PROGRAM_ID)) ||
@@ -1212,7 +1302,7 @@ async function hasErDelegatedMirror(
 ): Promise<boolean | null> {
   try {
     if (isLocalEphemeralRpc(teeConnection.rpcEndpoint)) {
-      const erInfo = await teeConnection.getAccountInfo(componentPda);
+      const erInfo = await getAccountInfoWithRetry(teeConnection, componentPda);
       return !!erInfo && erInfo.owner.equals(componentId);
     }
 
@@ -1236,8 +1326,8 @@ async function isErMirrorSyncedToBase(
   try {
     if (isLocalEphemeralRpc(teeConnection.rpcEndpoint)) {
       const [baseInfo, erInfo] = await Promise.all([
-        baseConnection.getAccountInfo(componentPda),
-        teeConnection.getAccountInfo(componentPda),
+        getAccountInfoWithRetry(baseConnection, componentPda),
+        getAccountInfoWithRetry(teeConnection, componentPda),
       ]);
       if (!baseInfo) {
         return false;
@@ -1270,13 +1360,21 @@ async function waitForDelegationState(
   let lastErState: boolean | null = null;
 
   while (Date.now() < deadline) {
-    lastBaseState = await isDelegatedComponent(baseConnection, componentPda);
-    lastErState = await isErMirrorSyncedToBase(
-      baseConnection,
-      teeConnection,
-      componentPda,
-      componentId,
-    );
+    try {
+      lastBaseState = await isDelegatedComponent(baseConnection, componentPda);
+      lastErState = await isErMirrorSyncedToBase(
+        baseConnection,
+        teeConnection,
+        componentPda,
+        componentId,
+      );
+    } catch (error) {
+      if (!isRetriableRpcReadError(error)) {
+        throw error;
+      }
+      await sleep(500);
+      continue;
+    }
 
     if (
       (expectedDelegated && lastBaseState && lastErState === true) ||
@@ -1379,7 +1477,7 @@ async function ensureSettlementPolicyState(
   const worldAccount = await World.fromAccountAddress(provider.connection, world);
   const worldId = new BN(worldAccount.id.toString());
   const policyEntity = FindEntityPda({ worldId, seed: settlementPolicyEntitySeed() });
-  const entityInfo = await provider.connection.getAccountInfo(policyEntity);
+  const entityInfo = await getAccountInfoWithRetry(provider.connection, policyEntity);
 
   if (!entityInfo) {
     const addEntity = await AddEntity({
@@ -1488,6 +1586,14 @@ async function ensureSettlementPolicyConfigured(
     currentPolicy.clearanceAuthority === (policyConfig.clearanceAuthority ?? null);
 
   if (isAlreadyConfigured) {
+    await undelegateComponentAccount(
+      provider.connection,
+      teeProvider.connection,
+      wallet.payer,
+      wallet.publicKey,
+      policyState.policyPda,
+      ids.settlementAuthorityPolicyComponentId,
+    );
     return policyState;
   }
 
@@ -1513,6 +1619,15 @@ async function ensureSettlementPolicyConfigured(
     transaction,
     undefined,
     policyAuthoritySigner.publicKey.equals(wallet.publicKey) ? [] : [policyAuthoritySigner.keypair],
+  );
+
+  await undelegateComponentAccount(
+    provider.connection,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    policyState.policyPda,
+    ids.settlementAuthorityPolicyComponentId,
   );
 
   return policyState;
@@ -1550,7 +1665,7 @@ async function ensurePaymentPolicyState(
   const worldAccount = await World.fromAccountAddress(provider.connection, world);
   const worldId = new BN(worldAccount.id.toString());
   const policyEntity = FindEntityPda({ worldId, seed: paymentPolicyEntitySeed() });
-  const entityInfo = await provider.connection.getAccountInfo(policyEntity);
+  const entityInfo = await getAccountInfoWithRetry(provider.connection, policyEntity);
 
   if (!entityInfo) {
     const addEntity = await AddEntity({
@@ -1655,6 +1770,14 @@ async function ensurePaymentRoutingConfigured(
     currentPolicy.operatorFeeBps === (policyConfig.operatorFeeBps ?? 0);
 
   if (isAlreadyConfigured) {
+    await undelegateComponentAccount(
+      provider.connection,
+      teeProvider.connection,
+      wallet.payer,
+      wallet.publicKey,
+      policyState.policyPda,
+      ids.paymentRoutingPolicyComponentId,
+    );
     return policyState;
   }
 
@@ -1680,6 +1803,15 @@ async function ensurePaymentRoutingConfigured(
     transaction,
     undefined,
     policyAuthoritySigner.publicKey.equals(wallet.publicKey) ? [] : [policyAuthoritySigner.keypair],
+  );
+
+  await undelegateComponentAccount(
+    provider.connection,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    policyState.policyPda,
+    ids.paymentRoutingPolicyComponentId,
   );
 
   return policyState;
@@ -2048,7 +2180,7 @@ async function readAssetRegistrySnapshot(
   assetType: number;
   isSold: boolean;
 } | null> {
-  const account = await connection.getAccountInfo(assetRegistryPda);
+  const account = await getAccountInfoWithRetry(connection, assetRegistryPda);
   if (!account) {
     return null;
   }
@@ -2113,7 +2245,7 @@ async function readDealTermsSnapshot(
   consentExpiresAt: number;
   consentNonce: number;
 } | null> {
-  const account = await connection.getAccountInfo(dealTermsPda);
+  const account = await getAccountInfoWithRetry(connection, dealTermsPda);
   if (!account) {
     return null;
   }
@@ -2292,7 +2424,7 @@ async function readSettlementPolicySnapshot(
   connection: Connection,
   policyPda: PublicKey,
 ): Promise<SettlementPolicySnapshot | null> {
-  const account = await connection.getAccountInfo(policyPda);
+  const account = await getAccountInfoWithRetry(connection, policyPda);
   if (!account) {
     return null;
   }
@@ -2328,7 +2460,7 @@ async function readPaymentRoutingPolicySnapshot(
   connection: Connection,
   policyPda: PublicKey,
 ): Promise<PaymentRoutingPolicySnapshot | null> {
-  const account = await connection.getAccountInfo(policyPda);
+  const account = await getAccountInfoWithRetry(connection, policyPda);
   if (!account) {
     return null;
   }
@@ -2424,7 +2556,7 @@ export async function getClearanceStatus(buyerPubkeyStr: string): Promise<any | 
     const entityPda = FindEntityPda({ worldId, seed });
     const componentPda = FindComponentPda({ componentId: ids.buyerClearanceComponentId, entity: entityPda });
     
-    let account = await provider.connection.getAccountInfo(componentPda);
+    let account = await getAccountInfoWithRetry(provider.connection, componentPda);
     let decoded: any = null;
     let isDelegated = account ? account.owner.equals(delegationProgramId) : false;
     
@@ -2439,7 +2571,7 @@ export async function getClearanceStatus(buyerPubkeyStr: string): Promise<any | 
     if (isDelegated || !decoded) {
       try {
         const teeProvider = await buildTeeProvider(wallet);
-        const teeAccount = await teeProvider.connection.getAccountInfo(componentPda);
+        const teeAccount = await getAccountInfoWithRetry(teeProvider.connection, componentPda);
         if (teeAccount) {
           decoded = getBuyerClearanceCoder().decode("BuyerClearance", teeAccount.data);
         }
@@ -2660,16 +2792,31 @@ export async function executeCreateListing(
   const normalizedInput: CreateListingInput = {
     ...input,
     recipient: privateRecipient,
+    tokenMint: canonicalizeOptionalPubkeyString(input.tokenMint ?? null, "tokenMint"),
+    vestingSourceProgram: canonicalizeOptionalPubkeyString(
+      input.vestingSourceProgram ?? null,
+      "vestingSourceProgram",
+    ),
+    vestingSourcePosition: canonicalizeOptionalPubkeyString(
+      input.vestingSourcePosition ?? null,
+      "vestingSourcePosition",
+    ),
     requiredSettlementAttestor:
-      input.requiredSettlementAttestor ??
-      optionalEnv("REQUIRED_SETTLEMENT_ATTESTOR") ??
-      configuredSettlementAuthority?.toBase58() ??
-      null,
+      canonicalizeOptionalPubkeyString(
+        input.requiredSettlementAttestor ??
+          optionalEnv("REQUIRED_SETTLEMENT_ATTESTOR") ??
+          configuredSettlementAuthority?.toBase58() ??
+          null,
+        "requiredSettlementAttestor",
+      ),
     requiredConsentAuthority:
-      input.requiredConsentAuthority ??
-      optionalEnv("REQUIRED_CONSENT_AUTHORITY") ??
-      configuredConsentAuthority?.toBase58() ??
-      null,
+      canonicalizeOptionalPubkeyString(
+        input.requiredConsentAuthority ??
+          optionalEnv("REQUIRED_CONSENT_AUTHORITY") ??
+          configuredConsentAuthority?.toBase58() ??
+          null,
+        "requiredConsentAuthority",
+      ),
   };
   
   const listingId = Math.floor(Date.now() / 1000).toString();
@@ -2875,32 +3022,25 @@ export async function executeCreateListing(
   };
   savePersistedState(toPersistedState(state, persistedListing));
 
-  const explorerUrlPer = (sig: string) => `https://explorer.magicblock.app/tx/${sig}`;
-
   return {
     success: true,
     steps: [
       {
         label: "Delegate asset state to PER",
         sig: listAssetDelegateSignature,
-        explorerUrl: listAssetDelegateSignature === "already-delegated" 
-          ? null 
-          : explorerUrl(listAssetDelegateSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(listAssetDelegateSignature),
       },
       {
         label: "Execute create_listing in TEE/PER",
         sig: createListingPerSignature,
-        explorerUrl: explorerUrlPer(createListingPerSignature),
+        explorerUrl: perTxExplorerUrl(createListingPerSignature),
       },
       {
         label: keepAssetRegistryInPer
           ? "Keep AssetRegistry confidential in ER/PER"
           : "Commit AssetRegistry to Solana",
         sig: listAssetCommitSignature,
-        explorerUrl:
-          listAssetCommitSignature === "kept-delegated-in-per" || listAssetCommitSignature === "already-undelegated"
-            ? null
-            : explorerUrl(listAssetCommitSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(listAssetCommitSignature),
       },
     ],
     world: state.world.toBase58(),
@@ -3061,22 +3201,19 @@ export async function executeAttestVestingSettlement(
       {
         label: "Delegate vesting state to ER/PER",
         sig: attestAssetDelegateSignature,
-        explorerUrl: explorerUrl(attestAssetDelegateSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(attestAssetDelegateSignature),
       },
       {
         label: "Attest vesting settlement in ER/PER",
         sig: attestPerSignature,
-        explorerUrl: explorerUrl(attestPerSignature, "tx"),
+        explorerUrl: perTxExplorerUrl(attestPerSignature),
       },
       {
         label: keepAssetRegistryInPer
           ? "Keep AssetRegistry confidential in ER/PER"
           : "Commit AssetRegistry to Solana",
         sig: attestAssetCommitSignature,
-        explorerUrl:
-          attestAssetCommitSignature === "kept-delegated-in-per"
-            ? null
-            : explorerUrl(attestAssetCommitSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(attestAssetCommitSignature),
       },
     ],
     world: state.world.toBase58(),
@@ -3190,22 +3327,19 @@ export async function executeIssueTransferConsent(
       {
         label: "Delegate restricted listing state to ER/PER",
         sig: consentAssetDelegateSignature,
-        explorerUrl: explorerUrl(consentAssetDelegateSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(consentAssetDelegateSignature),
       },
       {
         label: "Issue transfer consent in ER/PER",
         sig: consentPerSignature,
-        explorerUrl: explorerUrl(consentPerSignature, "tx"),
+        explorerUrl: perTxExplorerUrl(consentPerSignature),
       },
       {
         label: keepAssetRegistryInPer
           ? "Keep AssetRegistry confidential in ER/PER"
           : "Commit AssetRegistry to Solana",
         sig: consentAssetCommitSignature,
-        explorerUrl:
-          consentAssetCommitSignature === "kept-delegated-in-per"
-            ? null
-            : explorerUrl(consentAssetCommitSignature, "tx"),
+        explorerUrl: solanaTxExplorerUrl(consentAssetCommitSignature),
       },
     ],
     world: state.world.toBase58(),
@@ -3333,26 +3467,6 @@ export async function executeMatchOffer(
     ids.buyerClearanceComponentId,
     teeValidator,
   );
-  const matchPaymentPolicyDelegateSignature = await delegateComponentAccount(
-    provider,
-    teeProvider.connection,
-    wallet.payer,
-    wallet.publicKey,
-    paymentPolicyState.policyEntity,
-    ids.paymentRoutingPolicyComponentId,
-    teeValidator,
-  );
-  const matchPolicyDelegateSignature = await delegateComponentAccount(
-    provider,
-    teeProvider.connection,
-    wallet.payer,
-    wallet.publicKey,
-    settlementPolicyState.policyEntity,
-    ids.settlementAuthorityPolicyComponentId,
-    teeValidator,
-  );
-  void matchPaymentPolicyDelegateSignature;
-  void matchPolicyDelegateSignature;
   const protocolFeeBps =
     paymentPolicy?.protocolFeeBps ??
     parseSafeInteger(
@@ -3375,7 +3489,7 @@ export async function executeMatchOffer(
             );
           })(),
       )
-    : PublicKey.default;
+    : wallet.publicKey; // Use operator wallet instead of PublicKey.default to avoid ConstraintMut on System Program
   const operatorTreasury = operatorFeeBps > 0
     ? new PublicKey(
         paymentPolicy?.operatorTreasury ??
@@ -3386,7 +3500,7 @@ export async function executeMatchOffer(
             );
           })(),
       )
-    : PublicKey.default;
+    : wallet.publicKey; // Use operator wallet instead of PublicKey.default to avoid ConstraintMut on System Program
   const matchOfferExtraAccounts: AccountMeta[] = [
     {
       pubkey: buyerClearancePda,
@@ -3410,23 +3524,25 @@ export async function executeMatchOffer(
       isWritable: false,
     },
     {
+      // MatchOffer.execute only validates this payout key. Settlement happens later
+      // inside CommitMatchedOffer's Magic action, where the payout wallet is writable.
       pubkey: new PublicKey(persistedListing.owner),
       isSigner: false,
-      isWritable: true,
+      isWritable: false,
     },
   ];
   if (protocolFeeBps > 0) {
     matchOfferExtraAccounts.push({
       pubkey: protocolTreasury,
       isSigner: false,
-      isWritable: true,
+      isWritable: false,
     });
   }
   if (operatorFeeBps > 0) {
     matchOfferExtraAccounts.push({
       pubkey: operatorTreasury,
       isSigner: false,
-      isWritable: true,
+      isWritable: false,
     });
   }
   matchOfferExtraAccounts.push({
@@ -3439,6 +3555,18 @@ export async function executeMatchOffer(
     isSigner: a.isSigner,
     isWritable: a.isWritable,
   })));
+  let matchOfferTransaction = await buildMatchOfferTransaction(
+    wallet.publicKey,
+    state.world,
+    ids.matchOfferSystemId,
+    state.sellerEntity,
+    ids.assetRegistryComponentId,
+    ids.dealTermsComponentId,
+    buyer,
+    bidPrice,
+    matchOfferExtraAccounts,
+  );
+
   const escrowIndex = escrowIndexForListing(listingId);
   const escrowFundingAmount = parseSafeInteger(
     bidPrice + 1_000_000,
@@ -3460,28 +3588,17 @@ export async function executeMatchOffer(
       teeValidator,
     },
   );
-  
   const undelegateIx = createUndelegateInstruction({
     payer: wallet.publicKey,
     delegatedAccount: state.assetRegistryPda,
     componentPda: ids.assetRegistryComponentId,
   });
 
-  let matchOfferTransaction = await buildMatchOfferTransaction(
-    wallet.publicKey,
-    state.world,
-    ids.matchOfferSystemId,
-    state.sellerEntity,
-    ids.assetRegistryComponentId,
-    ids.dealTermsComponentId,
-    buyer,
-    bidPrice,
-    matchOfferExtraAccounts,
-  );
+  // Merge all instructions into one transaction so the buyer can sign via Phantom.
+  // The buyer is a SIGNER (required by Magic BaseAction) but NOT writable (PER constraint).
   matchOfferTransaction.add(undelegateIx, commitMatchedOfferInstruction);
 
   // Keep the operator wallet as fee payer for PER transactions.
-  // The buyer still signs and funds settlement inside the system instruction.
   const matchOfferPayer = wallet.payer;
   const matchOfferAdditionalSigners = [
     paymentSigner.publicKey.equals(matchOfferPayer.publicKey) ? null : paymentSigner.keypair,
@@ -3526,6 +3643,7 @@ export async function executeMatchOffer(
   const escrowAuthoritySigner =
     paymentSigner.publicKey.equals(buyer) ? paymentSigner : null;
 
+  // Fund the Magic escrow on the base layer BEFORE submitting to PER.
   const topUpEscrowSignature = await sendAndConfirmBaseTransaction(
     provider.connection,
     paymentSigner.keypair,
@@ -3610,34 +3728,34 @@ export async function executeMatchOffer(
   savePersistedState(toPersistedState(state, updatedListing));
 
   const steps: FlowStep[] = [
-    {
-      label: "Delegate asset state to PER",
-      sig: matchAssetDelegateSignature,
-      explorerUrl: explorerUrl(matchAssetDelegateSignature, "tx"),
-    },
-    {
-      label: "Match Offer and Settle Payment in TEE/PER",
-      sig: matchOfferPerSignature,
-      explorerUrl: explorerUrl(matchOfferPerSignature, "tx"),
-    },
-    {
-      label: "Fund buyer Magic escrow on Solana",
-      sig: topUpEscrowSignature,
-      explorerUrl: explorerUrl(topUpEscrowSignature, "tx"),
-    },
+      {
+        label: "Delegate asset state to PER",
+        sig: matchAssetDelegateSignature,
+        explorerUrl: solanaTxExplorerUrl(matchAssetDelegateSignature),
+      },
+      {
+        label: "Match offer, commit and settle in TEE/PER",
+        sig: matchOfferPerSignature,
+        explorerUrl: perTxExplorerUrl(matchOfferPerSignature),
+      },
+      {
+        label: "Fund buyer Magic escrow on Solana",
+        sig: topUpEscrowSignature,
+        explorerUrl: solanaTxExplorerUrl(topUpEscrowSignature),
+      },
   ];
   if (publishDealTermsOnChain) {
     steps.push({
       label: "Commit DealTerms to Solana",
       sig: matchDealTermsCommitSignature,
-      explorerUrl: explorerUrl(matchDealTermsCommitSignature, "tx"),
+      explorerUrl: solanaTxExplorerUrl(matchDealTermsCommitSignature),
     });
   }
   if (closeEscrowSignature !== "close-skipped") {
     steps.push({
       label: "Close buyer Magic escrow",
       sig: closeEscrowSignature,
-      explorerUrl: explorerUrl(closeEscrowSignature, "tx"),
+      explorerUrl: solanaTxExplorerUrl(closeEscrowSignature),
     });
   }
 
@@ -3696,7 +3814,7 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
   const buyerEntity = FindEntityPda({ worldId, seed });
 
   // Make sure the entity exists, or create it if not
-  const entityInfo = await provider.connection.getAccountInfo(buyerEntity);
+  const entityInfo = await getAccountInfoWithRetry(provider.connection, buyerEntity);
   if (!entityInfo) {
     const addEntity = await AddEntity({
       payer: provider.wallet.publicKey,
@@ -3771,12 +3889,12 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
       {
         label: "Delegate BuyerClearance to PER",
         sig: delegateSignature,
-        explorerUrl: explorerUrl(delegateSignature, "tx")
+        explorerUrl: solanaTxExplorerUrl(delegateSignature)
       },
       {
         label: "Execute issue_clearance in TEE/PER",
         sig: perSignature,
-        explorerUrl: explorerUrl(perSignature, "tx")
+        explorerUrl: perTxExplorerUrl(perSignature)
       },
       {
         label: "Keep BuyerClearance confidential in ER/PER",

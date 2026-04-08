@@ -21,6 +21,20 @@ function uint8ArrayToBase64(bytes) {
   return window.btoa(binary);
 }
 
+async function signPreparedPerTransaction(
+  transactionBase64,
+  signTransaction,
+) {
+  const txBytes = base64ToUint8Array(transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  if (!signTransaction) {
+    throw new Error("Wallet connection required to sign the transaction.");
+  }
+
+  return await signTransaction(transaction);
+}
+
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -63,11 +77,11 @@ export async function createListing(params, signTransaction) {
       body: JSON.stringify(params),
     });
 
-    const txBytes = base64ToUint8Array(prep.transactionBase64);
-    const transaction = Transaction.from(txBytes);
-    
-    console.log("Requesting Phantom signature...");
-    const signed = await signTransaction(transaction);
+    console.log("Requesting wallet signature...");
+    const signed = await signPreparedPerTransaction(
+      prep.transactionBase64,
+      signTransaction,
+    );
     console.log("Signature successful, serializing...");
 
     const signedBase64 = uint8ArrayToBase64(signed.serialize({ requireAllSignatures: false }));
@@ -97,11 +111,10 @@ export async function matchOffer(tradeId, params, signTransaction) {
       body: JSON.stringify(params || {}),
     });
 
-    const txBytes = base64ToUint8Array(prep.transactionBase64);
-    const transaction = Transaction.from(txBytes);
-    
-    // Request wallet to sign the payload without broadcasting
-    const signed = await signTransaction(transaction);
+    const signed = await signPreparedPerTransaction(
+      prep.transactionBase64,
+      signTransaction,
+    );
     const signedMessage = signed.serialize({ requireAllSignatures: false });
     const signedBase64 = uint8ArrayToBase64(signedMessage);
 

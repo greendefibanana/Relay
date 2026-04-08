@@ -8,7 +8,9 @@ const AppContext = React.createContext({
   isWeb3Enabled: false,
   user_account: false,
   displayAccount: false,
-  comingsoon:false
+  comingsoon:false,
+  signTransaction: null,
+  signMessage: null,
 });
 
 export default AppContext;

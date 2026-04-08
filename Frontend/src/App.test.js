@@ -17,6 +17,8 @@ jest.mock('./hooks/useWallet', () => ({
     displayKey: null,
     connect: jest.fn(),
     disconnect: jest.fn(),
+    signTransaction: jest.fn(),
+    signMessage: jest.fn(),
   }),
 }));
 

@@ -35,7 +35,7 @@ const SETTLEMENT_MODE_OPTIONS = [
 const INITIAL_STEPS = [
   { label: "Delegate to PER", sig: null, explorerUrl: null, status: "pending" },
   { label: "Execute in TEE / PER", sig: null, explorerUrl: null, status: "pending" },
-  { label: "Commit AssetRegistry to Solana", sig: null, explorerUrl: null, status: "pending" },
+  { label: "Finalize listing state", sig: null, explorerUrl: null, status: "pending" },
 ];
 
 /* ── Section card wrapper ─────────────────────────────────────────────────── */
@@ -129,16 +129,6 @@ const SetuptradeDapp = ({ closeHeader }) => {
     );
   };
 
-  const completeStep = (index, sig, url) => {
-    setTxSteps((prev) =>
-      prev.map((s, i) => {
-        if (i === index) return { ...s, status: "done", sig, explorerUrl: url };
-        if (i === index + 1) return { ...s, status: "active" };
-        return s;
-      })
-    );
-  };
-
   const failWithMessage = (message) => {
     setdisplayError(true);
     seterrorMessage(message);
@@ -207,11 +197,7 @@ const SetuptradeDapp = ({ closeHeader }) => {
         seller: user_account || null,
       }, signTransaction);
 
-      completeStep(0, result.steps[0].sig, result.steps[0].explorerUrl);
-      await new Promise((r) => setTimeout(r, 700));
-      completeStep(1, result.steps[1].sig, result.steps[1].explorerUrl);
-      await new Promise((r) => setTimeout(r, 700));
-      completeStep(2, result.steps[2].sig, result.steps[2].explorerUrl);
+      setTxSteps(result.steps.map((step) => ({ ...step, status: "done" })));
 
       setTxNote(result.note);
       setTxDone(true);
