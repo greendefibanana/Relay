@@ -1,0 +1,12 @@
+{
+  "framework": "create-react-app",
+  "installCommand": "npm --prefix Frontend install",
+  "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm --prefix Frontend run build",
+  "outputDirectory": "Frontend/build",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
