@@ -1,0 +1,22 @@
+$ErrorActionPreference = "Stop"
+
+Set-Location "C:\Users\ezevi\Documents\Relay"
+
+$env:API_PORT = "3030"
+$env:ALLOW_UNAUTHENTICATED_ADMIN = "true"
+$env:ALLOW_CUSTODIAL_PAYMENT = "true"
+$env:DEMO_SKIP_BUYER_CLEARANCE = "true"
+$env:DEMO_DISABLE_SPL_CREATE_ESCROW = "true"
+$env:RELAY_ALLOWED_ORIGIN = "http://localhost:3000,http://127.0.0.1:3000"
+$env:SOLANA_RPC_URL = "https://api.devnet.solana.com"
+$env:TEE_RPC_URL = "https://tee.magicblock.app"
+$env:SKIP_TEE_VERIFICATION = "true"
+$env:WALLET_PATH = "C:/Users/ezevi/.config/solana/id.json"
+$env:RELAY_STATE_PATH = ".relay-state.devnet-oldids-demo.json"
+$env:PUBLISH_DEAL_TERMS_ONCHAIN = "false"
+$env:ASSET_REGISTRY_COMPONENT_ID = "6BE4Z9G2WkEq8AEH89FgBDDxv5517MGM1pzuzF1pZSDe"
+$env:DEAL_TERMS_COMPONENT_ID = "5DTNmzUrHxbpGsj7C8U1YP1AtaHJF1qEEy2CT6W2vCqN"
+$env:CREATE_LISTING_SYSTEM_ID = "7rjyGnnFRacekAxByYLiq7sXLEjScKRCbtsdnz621yMT"
+$env:MATCH_OFFER_SYSTEM_ID = "EfyPjbjJ9hwuRixNH7bkT6yETnsTmEtqnQ7L3Erw9pyj"
+
+& "C:\Program Files\nodejs\node.exe" "C:\Users\ezevi\Documents\Relay\node_modules\tsx\dist\cli.mjs" "C:\Users\ezevi\Documents\Relay\server\index.ts" *>> "C:\Users\ezevi\Documents\Relay\demo-api-oldids.log"

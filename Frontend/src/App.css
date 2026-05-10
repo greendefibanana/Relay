@@ -36,3 +36,26 @@
     transform: rotate(360deg);
   }
 }
+
+:root {
+    --background_color: #0D1019;
+    --header_bg_color: rgba(0, 0, 0, 1);
+    --raleway: 'Raleway', sans-serif;
+    --syne: 'Syne', sans-serif;
+    --white_color: #fff;
+    --linearBg: linear-gradient(70deg, #7900D9 16.65%, #0097FF 78.93%);
+}
+
+.landing_page_oth {
+    padding-bottom: 4rem;
+    overflow-x: hidden;
+}
+
+footer {
+    padding: 10px 3rem;
+    background-color: #131020;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}

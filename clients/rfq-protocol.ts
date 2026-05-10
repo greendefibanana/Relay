@@ -23,6 +23,7 @@ import {
   Keypair,
   PublicKey,
   SendTransactionError,
+  SYSVAR_RENT_PUBKEY,
   SystemProgram,
   Transaction,
   TransactionInstruction,
@@ -49,6 +50,7 @@ import assetRegistryIdl from "../target/idl/asset_registry.json";
 import dealTermsIdl from "../target/idl/deal_terms.json";
 import systemMatchOfferIdl from "../target/idl/system_match_offer.json";
 
+console.log(`[DEBUG] DELEGATION_PROGRAM_ID: ${DELEGATION_PROGRAM_ID.toBase58()}`);
 dotenv.config();
 
 const DEFAULT_SOLANA_RPC_URL = "https://api.devnet.solana.com";
@@ -203,6 +205,7 @@ export type CreateListingInput = {
 export type MatchOfferInput = {
   buyer?: string | null;
   bidPrice?: number;
+  listingEntity?: string | null;
 };
 
 export type AttestVestingSettlementInput = {
@@ -233,6 +236,7 @@ export type ListingSnapshot = {
   assetType: string;
   assetTypeId: number;
   owner: string;
+  sellerEntity: string;
   pda: string;
   dealTermsPda: string;
   minPrice: number;
@@ -712,6 +716,8 @@ function getWorldAccountsCoder(): anchor.BorshAccountsCoder {
 const assetRegistryCoder = new anchor.BorshAccountsCoder(assetRegistryIdl as Idl);
 const dealTermsCoder = new anchor.BorshAccountsCoder(dealTermsIdl as Idl);
 const delegationProgramId = new PublicKey(DELEGATION_PROGRAM_ID);
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
 const TOP_UP_EPHEMERAL_BALANCE_DISCRIMINATOR = 9;
 const CLOSE_EPHEMERAL_BALANCE_DISCRIMINATOR = 11;
@@ -882,6 +888,7 @@ async function sendAndConfirmPerTransaction(
   }
 
   const writableAccounts = getWritableAccounts(transaction);
+  console.log(`[DEBUG] Writable accounts: ${writableAccounts.join(", ")}`);
   const blockhashResponse = await fetch(connection.rpcEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1017,6 +1024,10 @@ function discriminatorBuffer(value: number): Buffer {
   return buffer;
 }
 
+function anchorInstructionDiscriminator(name: string): Buffer {
+  return createHash("sha256").update(`global:${name}`).digest().subarray(0, 8);
+}
+
 function encodeU64(value: number, field: string): Buffer {
   const parsed = parseSafeInteger(value, field);
   const buffer = Buffer.alloc(8);
@@ -1094,17 +1105,89 @@ function escrowIndexForListing(listingId: string): number {
   return createHash("sha256").update(listingId).digest()[0] ?? 0;
 }
 
+function tokenEscrowAuthority(assetRegistry: PublicKey, matchOfferProgramId: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("listing-token-escrow", "utf8"), assetRegistry.toBuffer()],
+    matchOfferProgramId,
+  )[0];
+}
+
+function associatedTokenAddress(owner: PublicKey, mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  )[0];
+}
+
+function createAssociatedTokenAccountInstruction(
+  payer: PublicKey,
+  ata: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: payer, isSigner: true, isWritable: true },
+      { pubkey: ata, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.alloc(0),
+  });
+}
+
+async function ensureAssociatedTokenAccount(
+  connection: Connection,
+  payer: Keypair,
+  owner: PublicKey,
+  mint: PublicKey,
+): Promise<PublicKey> {
+  const ata = associatedTokenAddress(owner, mint);
+  const existing = await getAccountInfoWithRetry(connection, ata);
+  if (existing) {
+    return ata;
+  }
+
+  await sendAndConfirmBaseTransaction(
+    connection,
+    payer,
+    new Transaction().add(
+      createAssociatedTokenAccountInstruction(payer.publicKey, ata, owner, mint),
+    ),
+  );
+  return ata;
+}
+
+function forceReadonlyAccount(transaction: Transaction, account: PublicKey): void {
+  for (const instruction of transaction.instructions) {
+    for (const meta of instruction.keys) {
+      if (meta.pubkey.equals(account)) {
+        meta.isWritable = false;
+      }
+    }
+  }
+}
+
 async function buildCommitMatchedOfferInstruction(
   provider: anchor.AnchorProvider,
   input: {
     payer: PublicKey;
     assetRegistry: PublicKey;
+    dealTerms: PublicKey;
     buyerClearance: PublicKey;
     escrowAuthority: PublicKey;
     bidPrice: number;
     paymentRoutingPolicy: PublicKey;
     protocolTreasury: PublicKey;
     operatorTreasury: PublicKey;
+    tokenAmount: number;
+    tokenEscrowAuthority: PublicKey;
+    tokenEscrowAccount: PublicKey;
+    buyerTokenAccount: PublicKey;
     escrowIndex: number;
     teeValidator: PublicKey;
   },
@@ -1118,11 +1201,16 @@ async function buildCommitMatchedOfferInstruction(
       paymentRoutingPolicy: input.paymentRoutingPolicy,
       protocolTreasury: input.protocolTreasury,
       operatorTreasury: input.operatorTreasury,
+      tokenAmount: new BN(input.tokenAmount),
+      tokenEscrowAuthority: input.tokenEscrowAuthority,
+      tokenEscrowAccount: input.tokenEscrowAccount,
+      buyerTokenAccount: input.buyerTokenAccount,
       escrowIndex: input.escrowIndex,
     })
     .accounts({
       payer: input.payer,
       assetRegistry: input.assetRegistry,
+      dealTerms: input.dealTerms,
       buyerClearance: input.buyerClearance,
       escrowAuthority: input.escrowAuthority,
       magicContext: new PublicKey("MagicContext1111111111111111111111111111111"),
@@ -1139,6 +1227,35 @@ async function buildCommitMatchedOfferInstruction(
   }
 
   return instruction;
+}
+
+function buildRefundCancelledListingTokensInstruction(input: {
+  matchOfferSystemId: PublicKey;
+  assetRegistry: PublicKey;
+  dealTerms: PublicKey;
+  owner: PublicKey;
+  tokenMint: PublicKey;
+}): TransactionInstruction {
+  const tokenEscrowAuth = tokenEscrowAuthority(
+    input.assetRegistry,
+    input.matchOfferSystemId,
+  );
+  const tokenEscrowAccount = associatedTokenAddress(tokenEscrowAuth, input.tokenMint);
+  const ownerTokenAccount = associatedTokenAddress(input.owner, input.tokenMint);
+
+  return new TransactionInstruction({
+    programId: input.matchOfferSystemId,
+    keys: [
+      { pubkey: input.assetRegistry, isSigner: false, isWritable: false },
+      { pubkey: input.dealTerms, isSigner: false, isWritable: false },
+      { pubkey: input.owner, isSigner: true, isWritable: true },
+      { pubkey: tokenEscrowAuth, isSigner: false, isWritable: false },
+      { pubkey: tokenEscrowAccount, isSigner: false, isWritable: true },
+      { pubkey: ownerTokenAccount, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: anchorInstructionDiscriminator("refund_cancelled_listing_tokens"),
+  });
 }
 
 async function closeEphemeralBalanceIfPossible(
@@ -1893,17 +2010,31 @@ async function undelegateComponentAccount(
   componentPda: PublicKey,
   componentProgramId: PublicKey,
 ): Promise<string> {
+  console.log(`[DEBUG] Undelegating ${componentPda.toBase58()} using component program ${componentProgramId.toBase58()}`);
   if (!(await isDelegatedComponent(baseConnection, componentPda))) {
     return "already-undelegated";
   }
 
-  const transaction = new anchor.web3.Transaction().add(
-    createUndelegateInstruction({
-      payer,
-      delegatedAccount: componentPda,
-      componentPda: componentProgramId,
-    }),
+  const instruction = createUndelegateInstruction({
+    payer,
+    delegatedAccount: componentPda,
+    componentPda: componentProgramId,
+  });
+
+  // The delegation program requires the delegated account to be writable in order to undelegate.
+  const accountIndex = instruction.keys.findIndex((k) =>
+    k.pubkey.equals(componentPda),
   );
+  if (accountIndex >= 0) {
+    instruction.keys[accountIndex].isWritable = true;
+  }
+
+  console.log(`[DEBUG] Undelegate instruction keys for ${componentPda.toBase58()}:`);
+  instruction.keys.forEach((k, i) => {
+    console.log(`  Key ${i}: ${k.pubkey.toBase58()} (writable=${k.isWritable}, signer=${k.isSigner})`);
+  });
+
+  const transaction = new anchor.web3.Transaction().add(instruction);
 
   const signature = await sendAndConfirmPerTransaction(teeConnection, payerKeypair, transaction);
   await waitForDelegationState(
@@ -1982,6 +2113,7 @@ async function buildMatchOfferTransaction(
   dealTermsComponentId: PublicKey,
   buyer: PublicKey,
   bidPrice: number,
+  listingEntity: PublicKey,
   extraAccounts: AccountMeta[],
 ): Promise<Transaction> {
   const applySystem = await ApplySystem({
@@ -2001,6 +2133,7 @@ async function buildMatchOfferTransaction(
     args: {
       buyer: buyer.toBase58(),
       bid_price: parseSafeInteger(bidPrice, "bidPrice"),
+      listing_entity: listingEntity.toBase58(),
       current_timestamp: Math.floor(Date.now() / 1000),
     },
   });
@@ -2115,57 +2248,60 @@ function baseProvider(wallet: LocalWallet): anchor.AnchorProvider {
 function componentIds() {
   return {
     assetRegistryComponentId: new PublicKey(
-      env("ASSET_REGISTRY_COMPONENT_ID", "4CwL74bNw5z2TEzxSjj2w6buKjKaSGzT5YAbV7DrSte2"),
+      env("ASSET_REGISTRY_COMPONENT_ID", "84rAQe7vMX8F8BevA9go8CWETc5FZJyKVgT5nowff81Z"),
     ),
     dealTermsComponentId: new PublicKey(
-      env("DEAL_TERMS_COMPONENT_ID", "8to6ZeAV3XQ617fAZcjeD47ujsq1yCwMYeL73DH7kZ17"),
+      env("DEAL_TERMS_COMPONENT_ID", "23vDPBsuhfMEjmySL3p7DWTzXxX6j33xtaWj9VkbM5gg"),
     ),
     paymentRoutingPolicyComponentId: new PublicKey(
       env(
         "PAYMENT_ROUTING_POLICY_COMPONENT_ID",
-        "GsKrmGeT4BG4FEhrRw9ReoncQETQaKQvKipxptxx2YXi",
+        "Dwp5fQgx1CtVfUaPiQhEeKEr2RwXmkarJJxkMXDAw194",
       ),
     ),
     settlementAuthorityPolicyComponentId: new PublicKey(
       env(
         "SETTLEMENT_AUTHORITY_POLICY_COMPONENT_ID",
-        "H59dwBiX1ntWqEExHR1RdfjS75UrQYZGs5w3TxbUoH5E",
+        "DxV3D2u8LPiJVZTJT7EkoovhXok4uzxZHwDznXmchHvG",
       ),
     ),
     createListingSystemId: new PublicKey(
-      env("CREATE_LISTING_SYSTEM_ID", "RRmid28bwiGY9LHhnm6uNdvjo5yoBLHTbtFyRQmCSR5"),
+      env("CREATE_LISTING_SYSTEM_ID", "FgVyAJoCFkym9QjD8NsQ3SbHVkJEbECjYHJ7PpdetkCN"),
+    ),
+    cancelListingSystemId: new PublicKey(
+      env("CANCEL_LISTING_SYSTEM_ID", "AwvMZG7WWjUNzLVUZFa5JRoCHz6cJ1nu2zxTCi3xYgKc"),
     ),
     attestVestingSettlementSystemId: new PublicKey(
       env(
         "ATTEST_VESTING_SETTLEMENT_SYSTEM_ID",
-        "5nbPHQ9Rd19M7EnPLFeHmF3UtAMu3vWnjHazxyHa9BKg",
+        "BrACdZTWSwNSwFexzUcPtobEB5wxMHXxW3Q9GR5i63Rc",
       ),
     ),
     configurePaymentRoutingSystemId: new PublicKey(
       env(
         "CONFIGURE_PAYMENT_ROUTING_SYSTEM_ID",
-        "AxJbuot2YEmw3XFnFpVc2Mk4WFuewG4uqci2J68vr8b1",
+        "Gnwd2U3g37AiZ5k4rphRnKHBx7UHujQupaE7XArMY8vt",
       ),
     ),
     configureSettlementPolicySystemId: new PublicKey(
       env(
         "CONFIGURE_SETTLEMENT_POLICY_SYSTEM_ID",
-        "AzJ4FSYj5UpqaoMMezoA7hKXms5zFnq3KijXeicrbUPs",
+        "7WTkuFXzdtYdFJGKnFB2oWrViVVpqqtsscULaQo4DXLq",
       ),
     ),
     matchOfferSystemId: new PublicKey(
       env("MATCH_OFFER_SYSTEM_ID", "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585"),
     ),
     buyerClearanceComponentId: new PublicKey(
-      env("BUYER_CLEARANCE_COMPONENT_ID", "6yM2Dkk6FiG8N9jQjtMQcDgsKNZDgc2J25K3muxVA8gz"),
+      env("BUYER_CLEARANCE_COMPONENT_ID", "H9SDPiu38JtdPJaKueCnoAjjNBPHrfUxUgS95JPRPDM5"),
     ),
     issueClearanceSystemId: new PublicKey(
-      env("ISSUE_CLEARANCE_SYSTEM_ID", "4rM76JYkhK8waP7KvGfuakkHVZQjfywK13xxb5MVZ4ra"),
+      env("ISSUE_CLEARANCE_SYSTEM_ID", "2e7rfeRKU33mGe9ZLRwNTnDKf8yRJttqPcbXgjX4UXxK"),
     ),
     issueTransferConsentSystemId: new PublicKey(
       env(
         "ISSUE_TRANSFER_CONSENT_SYSTEM_ID",
-        "FezJZYRfJxPBLpEY4AjJZXGkoyeWde1Hw6oUJVGL8zD1",
+        "ERJNXy2po3hrkGEJ3XM7hvMg3k2jRP1emb32voWvPNU9",
       ),
     ),
   };
@@ -2529,6 +2665,7 @@ function getBuyerClearanceCoder(): anchor.BorshAccountsCoder {
                 { name: "is_cleared", type: "bool" },
                 { name: "clearance_type", type: "u8" },
                 { name: "expires_at", type: "i64" },
+                { name: "listing_entity", type: "publicKey" },
               ],
             },
           },
@@ -2588,7 +2725,8 @@ export async function getClearanceStatus(buyerPubkeyStr: string): Promise<any | 
       buyer: decoded.buyer.toBase58(),
       isCleared: decoded.is_cleared,
       clearanceType: decoded.clearance_type,
-      expiresAt: decoded.expires_at.toNumber()
+      expiresAt: decoded.expires_at.toNumber(),
+      listingEntity: optionalListingPubkey(decoded.listing_entity?.toBase58()),
     };
   } catch(err) {
     console.log(`[DEBUG] getClearanceStatus fatal err:`, err);
@@ -2627,7 +2765,11 @@ export async function getListingSnapshot(listingId: string): Promise<ListingSnap
   }
 
   if (!assetRegistry) {
-    return null;
+    assetRegistry = {
+      isSold: persistedListing.isSold,
+      assetType: persistedListing.assetType,
+      owner: persistedListing.owner,
+    };
   }
 
   let dealTerms = null;
@@ -2700,6 +2842,7 @@ export async function getListingSnapshot(listingId: string): Promise<ListingSnap
     assetType: assetTypeLabel(assetRegistry.assetType),
     assetTypeId: assetRegistry.assetType,
     owner: assetRegistry.owner,
+    sellerEntity: protocolState.sellerEntity.toBase58(),
     pda: protocolState.assetRegistryPda.toBase58(),
     dealTermsPda: protocolState.dealTermsPda.toBase58(),
     minPrice,
@@ -2746,19 +2889,166 @@ export async function getListings(): Promise<ListingSnapshot[]> {
   return results.filter(Boolean) as ListingSnapshot[];
 }
 
-export async function executeCancelListing(listingId: string): Promise<{ ok: true; id: string }> {
+export async function executeCancelListing(listingId: string): Promise<FlowExecutionResult> {
   const stored = getStoredState();
   if (!stored) throw new Error("No protocol state exists.");
-  
-  const originalCount = stored.listings.length;
-  stored.listings = stored.listings.filter((l) => l.listingId !== listingId);
-  
-  if (stored.listings.length === originalCount) {
+
+  const persistedListing = stored.listings.find((l) => l.listingId === listingId);
+  if (!persistedListing) {
     throw new Error(`Listing ${listingId} not found`);
   }
-  
+  if (persistedListing.isSold) {
+    throw new Error(`Listing ${listingId} is already sold and cannot be cancelled.`);
+  }
+
+  const wallet = runtimeWallet();
+  const provider = baseProvider(wallet);
+  const teeProvider = await buildTeeProvider(wallet);
+  const ids = componentIds();
+  const state = restoredStateToProtocolState(stored, listingId);
+  const ownerSigner = resolveConfiguredSigner(
+    "OWNER_WALLET_PATH",
+    "OWNER_PUBKEY",
+    wallet.payer,
+  );
+  if (persistedListing.owner && ownerSigner.publicKey.toBase58() !== persistedListing.owner) {
+    throw new Error("cancel_listing requires OWNER_WALLET_PATH / OWNER_PUBKEY to match the listing owner.");
+  }
+
+  let tokenRefundSignature: string | null = null;
+  if (persistedListing.tokenMint) {
+    const tokenMint = new PublicKey(persistedListing.tokenMint);
+    await ensureAssociatedTokenAccount(
+      provider.connection,
+      wallet.payer,
+      ownerSigner.publicKey,
+      tokenMint,
+    );
+    tokenRefundSignature = await sendAndConfirmBaseTransaction(
+      provider.connection,
+      wallet.payer,
+      new Transaction().add(
+        buildRefundCancelledListingTokensInstruction({
+          matchOfferSystemId: ids.matchOfferSystemId,
+          assetRegistry: state.assetRegistryPda,
+          dealTerms: state.dealTermsPda,
+          owner: ownerSigner.publicKey,
+          tokenMint,
+        }),
+      ),
+      undefined,
+      ownerSigner.publicKey.equals(wallet.publicKey) ? [] : [ownerSigner.keypair],
+    );
+  }
+
+  const teeValidator = new PublicKey((await getClosestValidator(teeProvider.connection)).toBase58());
+  await ensureApprovedSystem(provider, state.world, ids.cancelListingSystemId);
+  const assetDelegateSignature = await delegateComponentAccount(
+    provider,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    state.sellerEntity,
+    ids.assetRegistryComponentId,
+    teeValidator,
+  );
+  const dealTermsDelegateSignature = await delegateComponentAccount(
+    provider,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    state.sellerEntity,
+    ids.dealTermsComponentId,
+    teeValidator,
+  );
+
+  const applySystem = await ApplySystem({
+    authority: ownerSigner.publicKey,
+    world: state.world,
+    systemId: ids.cancelListingSystemId,
+    entities: [
+      {
+        entity: state.sellerEntity,
+        components: [
+          { componentId: ids.assetRegistryComponentId },
+          { componentId: ids.dealTermsComponentId },
+        ],
+      },
+    ],
+    args: {},
+  });
+  const cancelSignature = await sendAndConfirmPerTransaction(
+    teeProvider.connection,
+    wallet.payer,
+    applySystem.transaction,
+    undefined,
+    ownerSigner.publicKey.equals(wallet.publicKey) ? [] : [ownerSigner.keypair],
+  );
+  const assetCommitSignature = await undelegateComponentAccount(
+    provider.connection,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    state.assetRegistryPda,
+    ids.assetRegistryComponentId,
+  );
+  const dealTermsCommitSignature = await undelegateComponentAccount(
+    provider.connection,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    state.dealTermsPda,
+    ids.dealTermsComponentId,
+  );
+
+  stored.listings = stored.listings.filter((l) => l.listingId !== listingId);
   savePersistedState(stored);
-  return { ok: true, id: listingId };
+  return {
+    success: true,
+    steps: [
+      ...(tokenRefundSignature
+        ? [
+            {
+              label: "Refund listed tokens from match_offer escrow",
+              sig: tokenRefundSignature,
+              explorerUrl: solanaTxExplorerUrl(tokenRefundSignature),
+            },
+          ]
+        : []),
+      {
+        label: "Delegate listing state to PER",
+        sig: assetDelegateSignature,
+        explorerUrl: solanaTxExplorerUrl(assetDelegateSignature),
+      },
+      {
+        label: "Delegate deal terms to PER",
+        sig: dealTermsDelegateSignature,
+        explorerUrl: solanaTxExplorerUrl(dealTermsDelegateSignature),
+      },
+      {
+        label: "Execute cancel_listing in TEE/PER",
+        sig: cancelSignature,
+        explorerUrl: perTxExplorerUrl(cancelSignature),
+      },
+      {
+        label: "Commit cancelled listing state",
+        sig: assetCommitSignature,
+        explorerUrl: solanaTxExplorerUrl(assetCommitSignature),
+      },
+      {
+        label: "Commit cleared deal terms",
+        sig: dealTermsCommitSignature,
+        explorerUrl: solanaTxExplorerUrl(dealTermsCommitSignature),
+      },
+    ],
+    world: state.world.toBase58(),
+    assetRegistryPda: state.assetRegistryPda.toBase58(),
+    dealTermsPda: state.dealTermsPda.toBase58(),
+    note: tokenRefundSignature
+      ? "Listing tokens were refunded from match_offer escrow before on-chain cancellation and local cache pruning."
+      : "Listing cancellation executed on-chain and the local cache was pruned after commit.",
+    listing: null,
+  };
 }
 
 export async function executeCreateListing(
@@ -2836,6 +3126,17 @@ export async function executeCreateListing(
   const teeValidator = new PublicKey((await getClosestValidator(teeProvider.connection)).toBase58());
   const publishDealTermsOnChain = env("PUBLISH_DEAL_TERMS_ONCHAIN", "false") === "true";
   const keepAssetRegistryInPer = isVestingAssetType(normalizedInput.assetType);
+  const createListingInputForChain: CreateListingInput = { ...normalizedInput };
+  const skipSplCreateEscrow =
+    process.env.DEMO_DISABLE_SPL_CREATE_ESCROW !== "false" &&
+    !isVestingAssetType(normalizedInput.assetType) &&
+    !!normalizedInput.tokenMint;
+  if (skipSplCreateEscrow) {
+    console.log(
+      `[demo] Skipping SPL token escrow inside create_listing PER transaction for mint ${normalizedInput.tokenMint}.`,
+    );
+    createListingInputForChain.tokenMint = null;
+  }
   const paymentPolicyState = await ensurePaymentRoutingConfigured(
     provider,
     teeProvider,
@@ -2868,6 +3169,57 @@ export async function executeCreateListing(
       "create_listing requires OWNER_WALLET_PATH / OWNER_PUBKEY to match the listing owner.",
     );
   }
+
+  const tokenMintPubkey = createListingInputForChain.tokenMint
+    ? new PublicKey(createListingInputForChain.tokenMint)
+    : null;
+  const tokenEscrowAuth = tokenEscrowAuthority(
+    state.assetRegistryPda,
+    ids.matchOfferSystemId,
+  );
+  const createListingExtraAccounts: AccountMeta[] = [
+    {
+      pubkey: owner,
+      isSigner: true,
+      isWritable: false,
+    },
+  ];
+
+  if (tokenMintPubkey) {
+    const sellerTokenAccount = associatedTokenAddress(owner, tokenMintPubkey);
+    const sellerTokenInfo = await getAccountInfoWithRetry(provider.connection, sellerTokenAccount);
+    if (!sellerTokenInfo) {
+      throw new Error(
+        `Seller token account ${sellerTokenAccount.toBase58()} does not exist for mint ${tokenMintPubkey.toBase58()}.`,
+      );
+    }
+
+    const escrowTokenAccount = await ensureAssociatedTokenAccount(
+      provider.connection,
+      wallet.payer,
+      tokenEscrowAuth,
+      tokenMintPubkey,
+    );
+
+    createListingExtraAccounts.push(
+      {
+        pubkey: sellerTokenAccount,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: escrowTokenAccount,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    );
+  }
+
   const listAssetDelegateSignature = await delegateComponentAccount(
     provider,
     teeProvider.connection,
@@ -2894,15 +3246,12 @@ export async function executeCreateListing(
     ids.assetRegistryComponentId,
     ids.dealTermsComponentId,
     owner,
-    normalizedInput,
-    [
-      {
-        pubkey: owner,
-        isSigner: true,
-        isWritable: false,
-      },
-    ],
+    createListingInputForChain,
+    createListingExtraAccounts,
   );
+  if (!owner.equals(wallet.publicKey)) {
+    forceReadonlyAccount(createListingTransaction, owner);
+  }
 
   let finalSigners = [ownerSigner.keypair];
   let finalTransaction = createListingTransaction;
@@ -2985,31 +3334,31 @@ export async function executeCreateListing(
     settlementPolicyEntity: settlementPolicyState?.policyEntity.toBase58(),
     settlementPolicyPda: settlementPolicyState?.policyPda.toBase58(),
     assetType: input.assetType,
-    minPrice: normalizedInput.minPrice,
-    tokenAmount: normalizedInput.tokenAmount,
-    valuationCap: normalizedInput.valuationCap,
-    tokenMint: normalizedInput.tokenMint ?? null,
-    vestingSourceProgram: normalizedInput.vestingSourceProgram ?? null,
-    vestingSourcePosition: normalizedInput.vestingSourcePosition ?? null,
-    vestingStartTs: normalizedInput.vestingStartTs ?? 0,
-    vestingCliffTs: normalizedInput.vestingCliffTs ?? 0,
-    vestingEndTs: normalizedInput.vestingEndTs ?? 0,
-    unlockedAmount: normalizedInput.unlockedAmount ?? 0,
-    claimedAmount: normalizedInput.claimedAmount ?? 0,
-    privateBuyer: normalizedInput.recipient ?? null,
-    transferRestrictionMode: normalizedInput.transferRestrictionMode ?? 0,
-    settlementMode: normalizedInput.settlementMode ?? 0,
-    settlementStatus: isVestingAssetType(normalizedInput.assetType) ? 1 : 0,
+    minPrice: createListingInputForChain.minPrice,
+    tokenAmount: createListingInputForChain.tokenAmount,
+    valuationCap: createListingInputForChain.valuationCap,
+    tokenMint: createListingInputForChain.tokenMint ?? null,
+    vestingSourceProgram: createListingInputForChain.vestingSourceProgram ?? null,
+    vestingSourcePosition: createListingInputForChain.vestingSourcePosition ?? null,
+    vestingStartTs: createListingInputForChain.vestingStartTs ?? 0,
+    vestingCliffTs: createListingInputForChain.vestingCliffTs ?? 0,
+    vestingEndTs: createListingInputForChain.vestingEndTs ?? 0,
+    unlockedAmount: createListingInputForChain.unlockedAmount ?? 0,
+    claimedAmount: createListingInputForChain.claimedAmount ?? 0,
+    privateBuyer: createListingInputForChain.recipient ?? null,
+    transferRestrictionMode: createListingInputForChain.transferRestrictionMode ?? 0,
+    settlementMode: createListingInputForChain.settlementMode ?? 0,
+    settlementStatus: isVestingAssetType(createListingInputForChain.assetType) ? 1 : 0,
     approvedBuyer: null,
     settlementAttestor: null,
-    settlementExpiresAt: normalizedInput.settlementExpiresAt ?? 0,
-    requiredSettlementAttestor: normalizedInput.requiredSettlementAttestor ?? null,
+    settlementExpiresAt: createListingInputForChain.settlementExpiresAt ?? 0,
+    requiredSettlementAttestor: createListingInputForChain.requiredSettlementAttestor ?? null,
     settlementNonce: 0,
     settlementProofId: null,
     settlementPolicyVersion: 0,
     settlementPreparedAt: 0,
-    requiredConsentAuthority: normalizedInput.requiredConsentAuthority ?? null,
-    consentStatus: normalizedInput.transferRestrictionMode === 1 ? 1 : 0,
+    requiredConsentAuthority: createListingInputForChain.requiredConsentAuthority ?? null,
+    consentStatus: createListingInputForChain.transferRestrictionMode === 1 ? 1 : 0,
     consentApprovedBuyer: null,
     consentAuthority: null,
     consentExpiresAt: 0,
@@ -3046,15 +3395,17 @@ export async function executeCreateListing(
     world: state.world.toBase58(),
     assetRegistryPda: state.assetRegistryPda.toBase58(),
     dealTermsPda: state.dealTermsPda.toBase58(),
-    note: keepAssetRegistryInPer
-      ? normalizedInput.recipient
-        ? "Vesting listing was reserved for a designated buyer and keeps AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
-        : "Vesting listings keep AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
-      : listDealTermsDelegateSignature === "already-delegated" || !publishDealTermsOnChain
+    note: skipSplCreateEscrow
+      ? "Demo mode skipped SPL token escrow inside create_listing because PER cannot write base-layer token accounts on this devnet path; listing state was created on devnet/PER."
+      : keepAssetRegistryInPer
         ? normalizedInput.recipient
-          ? "DealTerms remain confidential inside PER and the listing is reserved for its designated buyer."
-          : "DealTerms remain confidential inside PER."
-        : "DealTerms were committed back to Solana.",
+          ? "Vesting listing was reserved for a designated buyer and keeps AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
+          : "Vesting listings keep AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
+        : listDealTermsDelegateSignature === "already-delegated" || !publishDealTermsOnChain
+          ? normalizedInput.recipient
+            ? "DealTerms remain confidential inside PER and the listing is reserved for its designated buyer."
+            : "DealTerms remain confidential inside PER."
+          : "DealTerms were committed back to Solana.",
     listing: await getListingSnapshot(listingId),
   };
 }
@@ -3453,20 +3804,25 @@ export async function executeMatchOffer(
     ids.dealTermsComponentId,
     teeValidator,
   );
-  const buyerClearancePda = await findOrCreateComponent(
-    provider,
-    state.buyerEntity,
-    ids.buyerClearanceComponentId,
-  );
-  const matchClearanceDelegateSignature = await delegateComponentAccount(
-    provider,
-    teeProvider.connection,
-    wallet.payer,
-    wallet.publicKey,
-    state.buyerEntity,
-    ids.buyerClearanceComponentId,
-    teeValidator,
-  );
+  const skipBuyerClearance = process.env.DEMO_SKIP_BUYER_CLEARANCE === "true";
+  const buyerClearancePda = skipBuyerClearance
+    ? SystemProgram.programId
+    : await findOrCreateComponent(
+        provider,
+        state.buyerEntity,
+        ids.buyerClearanceComponentId,
+      );
+  const matchClearanceDelegateSignature = skipBuyerClearance
+    ? "skipped-demo-clearance"
+    : await delegateComponentAccount(
+        provider,
+        teeProvider.connection,
+        wallet.payer,
+        wallet.publicKey,
+        state.buyerEntity,
+        ids.buyerClearanceComponentId,
+        teeValidator,
+      );
   const protocolFeeBps =
     paymentPolicy?.protocolFeeBps ??
     parseSafeInteger(
@@ -3564,6 +3920,7 @@ export async function executeMatchOffer(
     ids.dealTermsComponentId,
     buyer,
     bidPrice,
+    state.sellerEntity,
     matchOfferExtraAccounts,
   );
 
@@ -3572,31 +3929,6 @@ export async function executeMatchOffer(
     bidPrice + 1_000_000,
     "escrowFundingAmount",
   );
-
-  const commitMatchedOfferInstruction = await buildCommitMatchedOfferInstruction(
-    teeProvider,
-    {
-      payer: wallet.publicKey,
-      assetRegistry: state.assetRegistryPda,
-      buyerClearance: buyerClearancePda,
-      escrowAuthority: buyer,
-      bidPrice,
-      paymentRoutingPolicy: paymentPolicyState.policyPda,
-      protocolTreasury,
-      operatorTreasury,
-      escrowIndex,
-      teeValidator,
-    },
-  );
-  const undelegateIx = createUndelegateInstruction({
-    payer: wallet.publicKey,
-    delegatedAccount: state.assetRegistryPda,
-    componentPda: ids.assetRegistryComponentId,
-  });
-
-  // Merge all instructions into one transaction so the buyer can sign via Phantom.
-  // The buyer is a SIGNER (required by Magic BaseAction) but NOT writable (PER constraint).
-  matchOfferTransaction.add(undelegateIx, commitMatchedOfferInstruction);
 
   // Keep the operator wallet as fee payer for PER transactions.
   const matchOfferPayer = wallet.payer;
@@ -3734,14 +4066,14 @@ export async function executeMatchOffer(
         explorerUrl: solanaTxExplorerUrl(matchAssetDelegateSignature),
       },
       {
-        label: "Match offer, commit and settle in TEE/PER",
-        sig: matchOfferPerSignature,
-        explorerUrl: perTxExplorerUrl(matchOfferPerSignature),
-      },
-      {
         label: "Fund buyer Magic escrow on Solana",
         sig: topUpEscrowSignature,
         explorerUrl: solanaTxExplorerUrl(topUpEscrowSignature),
+      },
+      {
+        label: "Match offer in TEE/PER",
+        sig: matchOfferPerSignature,
+        explorerUrl: perTxExplorerUrl(matchOfferPerSignature),
       },
   ];
   if (publishDealTermsOnChain) {
@@ -3767,8 +4099,8 @@ export async function executeMatchOffer(
     dealTermsPda: state.dealTermsPda.toBase58(),
     note:
       publishDealTermsOnChain
-        ? "Payment settled from a buyer-scoped Magic escrow during post-commit execution, and DealTerms were committed back to Solana."
-        : "Payment settled from a buyer-scoped Magic escrow during post-commit execution while DealTerms remained confidential inside ER/PER.",
+        ? "Match was recorded in PER, the buyer-scoped Magic escrow rail was funded on Solana, and DealTerms were committed back to Solana."
+        : "Match was recorded in PER and the buyer-scoped Magic escrow rail was funded on Solana while DealTerms remained confidential inside ER/PER.",
     listing: await getListingSnapshot(listingId),
   };
 }
@@ -3777,6 +4109,7 @@ export type IssueClearanceInput = {
   buyer: string;
   clearanceType: number; // 1 = Accredited, 2 = Qualified, 3 = Non-US
   expiresAt?: string; // UNIX timestamp
+  listingEntity?: string | null;
 };
 
 export async function executeIssueClearance(input: IssueClearanceInput): Promise<FlowExecutionResult> {
@@ -3786,8 +4119,6 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
   const ids = componentIds();
   const teeValidator = new PublicKey((await getClosestValidator(teeProvider.connection)).toBase58());
 
-  // Wait, there's no single listing we are bound to yet for clearance.
-  // Clearance belongs to the world and the buyer entity.
   const stored = getStoredState();
   const world = stored?.world ? new PublicKey(stored.world) : optionalPubkey("WORLD_PDA");
   
@@ -3860,6 +4191,7 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
       buyer: input.buyer,
       clearance_type: input.clearanceType,
       expires_at: expiresAt,
+      listing_entity: input.listingEntity ?? "",
     },
   });
 
@@ -3906,7 +4238,9 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
     assetRegistryPda: latestListing?.assetRegistryPda ?? "",
     dealTermsPda: latestListing?.dealTermsPda ?? "",
     note:
-      "Buyer clearance is global to the world and stays delegated inside ER/PER until the final match commits it back.",
+      input.listingEntity
+        ? "Buyer clearance is scoped to this listing entity and stays delegated inside ER/PER until final match."
+        : "Buyer clearance is global to the world and stays delegated inside ER/PER until final match.",
     listing: latestListingId ? await getListingSnapshot(latestListingId) : null,
   };
 }

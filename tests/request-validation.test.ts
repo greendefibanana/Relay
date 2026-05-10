@@ -180,6 +180,13 @@ run("parseMatchBody and parseIssueClearanceBody validate integer inputs", () => 
     buyer: "buyer-1",
     clearanceType: 2,
     expiresAt: "77",
+    listingEntity: null,
+  });
+  assert.deepEqual(parseIssueClearanceBody({ buyer: "buyer-1", clearanceType: 2, listingEntity: "listing-1" }), {
+    buyer: "buyer-1",
+    clearanceType: 2,
+    expiresAt: undefined,
+    listingEntity: "listing-1",
   });
 
   assert.throws(

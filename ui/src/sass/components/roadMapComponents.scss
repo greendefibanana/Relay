@@ -1,0 +1,205 @@
+.our_road_map{
+    // border: 1px solid red;
+    // width: 90%;
+    margin: 5rem auto;
+    // height: 100vh;
+    padding: 1rem;
+    position: relative;
+
+
+    &_header{
+        
+        & h5{
+            width: fit-content;
+            color: white;
+            margin: 0 auto;
+            font-family: var(--raleway);
+            font-size: 1.8rem;
+            font-weight: 700;
+            position: relative;
+
+            & span{
+                background: linear-gradient(70deg, #7900D9 16.65%, #0097FF 78.93%);
+                background-clip: text;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            & img{
+                // border: 1px solid red;
+                position: absolute;
+                bottom: 0;
+            }
+
+        }
+
+    }
+
+    &_body{
+        margin-top: 7rem;
+        display: flex;
+        justify-content: space-evenly;
+    margin-left: 10rem;
+
+        &_div{
+            // border: 1px solid red;
+            width: 32%;
+
+            &:nth-child(1){
+                // border: 1px solid red;
+                margin-top: 3.5rem;
+            }
+
+            &:nth-child(2){
+                // border: 1px solid green;
+                margin-top: 1.2rem;
+            }   
+
+            &_top{
+                position: relative;
+                // border: 1px solid red;
+
+                &_title{
+                    color: white;
+                    font-family: var(--syne);
+                    font-size: 1.4rem;
+                    font-weight:700;
+                    margin-bottom: 1rem;
+                }
+
+                & img{
+                    margin-left: -.3rem;
+                    margin-bottom: 2rem;
+                }
+
+                &_line{
+                    position: absolute;
+                    // border: 1px solid red;
+                    top: 2rem;
+                    left: 2.2rem;
+                }
+
+            }
+
+            &_list{
+                display: flex;
+                align-items: center;
+                margin-top: 1rem;
+
+                &_li{
+                    // border: 1px solid red;
+                    width: 1.5rem;
+                    height: 1.5rem;
+                    border-radius: 3000px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background-color: #D5B0F3;
+                    box-shadow: 2px -1px 14px 1px rgba(213,176,243,0.75);
+
+                    &_ic{
+                        width: .9rem;
+                        height: .9rem;
+                    }
+
+                }
+
+                & h5{
+                    margin-left: 1rem;
+                    font-family: var(--syne);
+                    color: white;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    width: 90%;
+                }
+
+            }
+
+        }
+
+    }
+
+    &_right_img{
+        position: absolute;
+        bottom: -5rem;
+        right: 0;
+    }
+
+    &_left_img{
+        position: absolute;
+        top: -8rem;
+        left:13rem;
+    }
+
+}
+
+.div_list_li2{
+    background-color: #B0DFFF;
+    box-shadow: 2px -1px 14px 1px rgba(176,223,255,0.75);
+}
+
+.div_list_li3{
+    background-color: rgba(255, 240, 219, 1);
+    box-shadow: 2px -1px 14px 1px rgba(255, 240, 219, 1);
+}
+
+
+@media (max-width:1156px){
+
+    .our_road_map_body_div_top_line{
+        display: none;
+    }
+
+    .our_road_map_body_div:nth-child(1){
+        margin-top: 0;
+    }
+
+    .our_road_map_body_div:nth-child(2){
+        margin-top: 0;
+    }
+
+    .our_road_map_body{
+        margin-left: 0;
+        flex-wrap: wrap;
+        // border: 1px solid red;
+    }
+
+    .our_road_map_body_div{
+        width: 75%;
+
+        &:not(:first-child){
+            margin-top: 3rem;
+        }
+
+    }
+
+    .our_road_map_body_div_top{
+        // border: 1px solid red;
+        display: flex;
+        flex-direction: row-reverse;
+        width: fit-content;
+        align-items: center;
+
+        &_title{
+            margin-bottom: 0;
+            margin-top: 0;
+            margin-left: 1rem;
+        }
+
+        & img{
+            margin-bottom: 0;
+        }
+
+    }
+
+}
+
+@media ( max-width: 499px ){
+    .our_road_map_header{
+        width: fit-content;
+    }
+
+    .our_road_map_body{
+        margin-top: 3rem;
+    }
+}

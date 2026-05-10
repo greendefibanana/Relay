@@ -104,14 +104,7 @@ const SelectTokenBdrop = ({closeModal}) => {
 
         try{
 
-            console.log("GetTokenbyAddress: Not implemented")
-            
-            setselectedToken([{
-                symbol:"MOCK",
-                name:"Mock Token",
-                tokenAddress:Query,
-                tokenId: Option ? '' : null
-            }])
+            setselectedToken([])
 
             setLoading(false)
 

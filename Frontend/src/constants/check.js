@@ -1,7 +1,6 @@
 
-const CheckNft = async (tokenAddress,Abi,signer,value) => {
-    console.log("CheckNft: Not implemented (mock logic)", { tokenAddress, value });
-    return Promise.resolve({ hash: "mock_hash" });
+const CheckNft = async () => {
+    throw new Error("NFT validation is not enabled in this Relay build.");
 }
 
 export {CheckNft}

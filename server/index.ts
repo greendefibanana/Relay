@@ -21,15 +21,47 @@ import {
 } from "./request-validation.js";
 
 const port = Number(process.env.API_PORT || "3030");
+const allowedOrigins = (process.env.RELAY_ALLOWED_ORIGIN || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-function setCors(res: http.ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+class UnauthorizedError extends Error {
+  readonly statusCode = 401;
 }
 
-function sendJson(res: http.ServerResponse, status: number, payload: unknown): void {
-  setCors(res);
+function setCors(res: http.ServerResponse, req?: http.IncomingMessage): void {
+  const origin = req?.headers.origin;
+  const allowedOrigin =
+    origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0] ?? "http://localhost:3000";
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
+function requireAdmin(req: http.IncomingMessage): void {
+  if (process.env.ALLOW_UNAUTHENTICATED_ADMIN === "true") {
+    return;
+  }
+  const token = process.env.RELAY_ADMIN_TOKEN;
+  if (!token) {
+    throw new UnauthorizedError(
+      "RELAY_ADMIN_TOKEN is required for privileged operations. Set ALLOW_UNAUTHENTICATED_ADMIN=true only for local demos.",
+    );
+  }
+  if (req.headers.authorization !== `Bearer ${token}`) {
+    throw new UnauthorizedError("Unauthorized privileged operation.");
+  }
+}
+
+function sendJson(
+  res: http.ServerResponse,
+  status: number,
+  payload: unknown,
+  req?: http.IncomingMessage,
+): void {
+  setCors(res, req);
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify(payload));
@@ -58,7 +90,7 @@ function notFound(res: http.ServerResponse): void {
 }
 
 const server = http.createServer(async (req, res) => {
-  setCors(res);
+  setCors(res, req);
 
   if (!req.url || !req.method) {
     notFound(res);
@@ -149,6 +181,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "DELETE" && url.pathname.match(/^\/api\/listings\/\d+$/)) {
+      requireAdmin(req);
       const id = url.pathname.split("/").pop()!;
       const result = await executeCancelListing(id);
       sendJson(res, 200, result);
@@ -156,6 +189,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/settlement-attest$/)) {
+      requireAdmin(req);
       const id = url.pathname.split("/")[3];
       const body = await readJsonBody(req);
       const result = await executeAttestVestingSettlement(id, parseSettlementAttestBody(body));
@@ -164,6 +198,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/consent$/)) {
+      requireAdmin(req);
       const id = url.pathname.split("/")[3];
       const body = await readJsonBody(req);
       const result = await executeIssueTransferConsent(id, parseConsentBody(body));
@@ -232,6 +267,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname === "/api/clearance") {
+      requireAdmin(req);
       const body = await readJsonBody(req);
       const result = await executeIssueClearance(parseIssueClearanceBody(body));
       sendJson(res, 200, result);
@@ -243,8 +279,11 @@ const server = http.createServer(async (req, res) => {
     console.error("API Request Error:", error);
     require("fs").appendFileSync("C:/Users/ezevi/Documents/Relay/api-crash-logs.txt", "\nAPI ERROR: " + (error instanceof Error ? error.stack : String(error)));
     const message = error instanceof Error ? error.message : String(error);
-    const status = error instanceof BadRequestError ? error.statusCode : 500;
-    sendJson(res, status, { error: message });
+    const status =
+      error instanceof BadRequestError || error instanceof UnauthorizedError
+        ? error.statusCode
+        : 500;
+    sendJson(res, status, { error: message }, req);
   }
 });
 

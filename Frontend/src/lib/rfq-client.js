@@ -1,5 +1,6 @@
 import { Transaction } from "@solana/web3.js";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3030";
+const RELAY_ADMIN_TOKEN = process.env.REACT_APP_RELAY_ADMIN_TOKEN || "";
 const SOLANA_EXPLORER = "https://explorer.solana.com";
 
 function base64ToUint8Array(base64) {
@@ -50,6 +51,10 @@ async function api(path, options = {}) {
   }
 
   return payload;
+}
+
+function adminHeaders() {
+  return RELAY_ADMIN_TOKEN ? { Authorization: `Bearer ${RELAY_ADMIN_TOKEN}` } : {};
 }
 
 export function explorerUrl(value, type = "address") {
@@ -134,6 +139,7 @@ export async function matchOffer(tradeId, params, signTransaction) {
 export async function attestVestingSettlement(tradeId, params) {
   return api(`/api/listings/${tradeId}/settlement-attest`, {
     method: "POST",
+    headers: adminHeaders(),
     body: JSON.stringify(params || {}),
   });
 }
@@ -141,6 +147,7 @@ export async function attestVestingSettlement(tradeId, params) {
 export async function issueTransferConsent(tradeId, params) {
   return api(`/api/listings/${tradeId}/consent`, {
     method: "POST",
+    headers: adminHeaders(),
     body: JSON.stringify(params || {}),
   });
 }
@@ -148,6 +155,7 @@ export async function issueTransferConsent(tradeId, params) {
 export async function issueClearance(params) {
   return api("/api/clearance", {
     method: "POST",
+    headers: adminHeaders(),
     body: JSON.stringify(params),
   });
 }
@@ -158,7 +166,7 @@ export async function getClearanceStatus(buyer) {
 }
 
 export async function cancelListing(tradeId) {
-  return api(`/api/listings/${tradeId}`, { method: "DELETE" });
+  return api(`/api/listings/${tradeId}`, { method: "DELETE", headers: adminHeaders() });
 }
 
 export async function getProtocolStats(listings) {

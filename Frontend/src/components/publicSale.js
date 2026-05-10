@@ -33,13 +33,11 @@ const PublicSaleComponent = () => {
                 return
             }
 
-            console.log("approveHandler: Not implemented")
-
             setisLoading(false)
-            setisSuccess({
+            setiserror({
                 status:true,
-                title:"Approval Successful",
-                message:"You have successfully approved this token (Mock)"
+                title:"Public sale unavailable",
+                message:"Token sale approvals are not enabled in this Relay build."
             })
 
 
@@ -67,14 +65,11 @@ const PublicSaleComponent = () => {
                 return
             }
 
-            console.log("contributeHandler: Not implemented")
-
             setisLoading(false)
-            setamountToContribute('')
-            setisSuccess({
+            setiserror({
                 status:true,
-                title:"Success",
-                message:"You have successfully contributed to this project (Mock)"
+                title:"Public sale unavailable",
+                message:"Token sale contributions are not enabled in this Relay build."
             })
         }
         catch(error){

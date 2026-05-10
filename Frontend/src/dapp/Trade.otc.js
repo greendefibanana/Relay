@@ -176,6 +176,7 @@ const TradeOtc = ({ closeHeader }) => {
         buyer: user_account,
         clearanceType: 1,
         expiresAt: "0",
+        listingEntity: listing?.sellerEntity || null,
       });
       await runStepSequence({ result, setSteps: setClearanceSteps });
       setClearanceLoading(false);
@@ -290,6 +291,10 @@ const TradeOtc = ({ closeHeader }) => {
 
   const reservedForOtherBuyer =
     listing?.privateBuyer && user_account ? listing.privateBuyer !== user_account : false;
+  const isClearedForListing =
+    (listing?.assetTypeId === 1 && listing?.transferRestrictionMode === 0) ||
+    (!!clearance?.isCleared &&
+      (!clearance?.listingEntity || !listing?.sellerEntity || clearance.listingEntity === listing.sellerEntity));
   const isNonTransferable = listing?.transferRestrictionMode === 2;
   const needsSettlement =
     listing && isVestingAssetType(listing.assetTypeId) && (listing.settlementStatus ?? 0) < 2;
@@ -423,8 +428,8 @@ const TradeOtc = ({ closeHeader }) => {
 
             {/* ── Pre-match checklist ── */}
             {!listing.isSold && (
-              <MatchChecklist
-                isCleared={clearance?.isCleared}
+                <MatchChecklist
+                  isCleared={isClearedForListing}
                 needsSettlement={needsSettlement}
                 needsConsent={needsConsent}
                 reservedForOtherBuyer={reservedForOtherBuyer}
@@ -433,10 +438,10 @@ const TradeOtc = ({ closeHeader }) => {
             )}
 
             <div style={{ margin: "1.5rem 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-              <ClearanceBadge isCleared={clearance?.isCleared} clearanceType={clearance?.clearanceType} />
+                <ClearanceBadge isCleared={isClearedForListing} clearanceType={clearance?.clearanceType} />
 
               {!listing.isSold && (
-                !clearance?.isCleared ? (
+                !isClearedForListing ? (
                   <button
                     className="setupTrade_btn setupTrade_btn--secondary"
                     disabled={clearanceLoading}
@@ -469,7 +474,7 @@ const TradeOtc = ({ closeHeader }) => {
               )}
             </div>
 
-            {clearanceSteps && !clearance?.isCleared && (
+            {clearanceSteps && !isClearedForListing && (
               <div style={{ marginTop: "1.5rem" }}>
                 <TxStatusPanel
                   steps={clearanceSteps}

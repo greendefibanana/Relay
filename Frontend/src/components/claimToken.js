@@ -29,13 +29,11 @@ const ClaimTokenComponent = () => {
 
         try{
 
-            console.log("claimHandler: Not implemented")
-
             setisLoading(false)
-            setisSuccess({
+            setiserror({
                 status:true,
-                title:"Success",
-                message:"You have successfully contributed to this project (Mock)"
+                title:"Claiming unavailable",
+                message:"Token claims are not enabled in this Relay build."
             })
 
         }
@@ -55,7 +53,6 @@ const ClaimTokenComponent = () => {
 
         try{
 
-            console.log("HandleGetclaimed: Not implemented")
             setClaimed(0)
             setOutstanding(0)
 

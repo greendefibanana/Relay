@@ -17,11 +17,10 @@ const TradeComponent = ({ receivingToken, givingToken, trade, withdrawalFunction
 
     const getTokenDetails = async (token,number) => {
 
-        console.log("getTokenDetails: Not implemented");
         try{
 
-            const symbol = "MOCK"
-            const name = "Mock Token"
+            const symbol = token.symbol || token.ticker || "UNKNOWN"
+            const name = token.name || "Unknown Token"
             const tokenAddress = token.tokenAddress
 
 
@@ -183,11 +182,10 @@ const TradeDetail = ({ receivingToken, givingToken, trade, withdrawalFunction, c
 
     const getTokenDetails = async (token,number) => {
 
-        console.log("getTokenDetails: Not implemented");
         try{
 
-            const symbol = "MOCK"
-            const name = "Mock Token"
+            const symbol = token.symbol || token.ticker || "UNKNOWN"
+            const name = token.name || "Unknown Token"
             const tokenAddress = token.tokenAddress
 
 

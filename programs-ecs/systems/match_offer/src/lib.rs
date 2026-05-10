@@ -1,7 +1,11 @@
 use std::str::FromStr;
 
 use anchor_lang::InstructionData;
-use anchor_lang::solana_program::{program::invoke, system_instruction, system_program};
+use anchor_lang::solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program::{invoke, invoke_signed},
+    system_instruction, system_program,
+};
 use bolt_lang::*;
 use ephemeral_rollups_sdk::anchor::{action, commit};
 use ephemeral_rollups_sdk::ephem::{CallHandler, MagicIntentBundleBuilder};
@@ -19,6 +23,8 @@ declare_id!("Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585");
 pub struct MatchOfferArgs {
     pub buyer: String,
     pub bid_price: u64,
+    #[serde(default)]
+    pub listing_entity: String,
     /// Current unix timestamp supplied by the client. Used to check clearance
     /// expiry. Must be > 0 to prevent timestamp bypass (H-2).
     #[serde(default)]
@@ -93,6 +99,110 @@ pub enum MatchOfferError {
     EscrowNotSigner,
     #[msg("The asset must be sold before payment settlement can run.")]
     AssetNotSold,
+    #[msg("Token program account is invalid.")]
+    InvalidTokenProgram,
+    #[msg("Token escrow authority PDA is invalid.")]
+    InvalidTokenEscrowAuthority,
+    #[msg("Token escrow account must be writable.")]
+    TokenEscrowNotWritable,
+    #[msg("Buyer token account must be writable.")]
+    BuyerTokenAccountNotWritable,
+    #[msg("Deal terms account does not match the matched listing.")]
+    DealTermsMismatch,
+    #[msg("Token amount does not match the listing deal terms.")]
+    TokenAmountMismatch,
+    #[msg("Token escrow account does not match the listing mint and escrow authority.")]
+    InvalidTokenEscrowAccount,
+    #[msg("Buyer token account does not match the matched buyer and listing mint.")]
+    InvalidBuyerTokenAccount,
+    #[msg("Signer does not match the listing owner.")]
+    OwnerNotSigner,
+    #[msg("Listing has not been initialised.")]
+    ListingNotInitialized,
+    #[msg("Token escrow balance is below the listed token amount.")]
+    TokenEscrowBalanceTooLow,
+}
+
+fn token_program_id() -> Pubkey {
+    Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap()
+}
+
+fn token_escrow_authority(asset_registry: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[b"listing-token-escrow", asset_registry.as_ref()], &crate::ID)
+}
+
+fn associated_token_program_id() -> Pubkey {
+    Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap()
+}
+
+fn associated_token_address(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[owner.as_ref(), token_program_id().as_ref(), mint.as_ref()],
+        &associated_token_program_id(),
+    )
+    .0
+}
+
+fn token_account_mint_owner(account: &AccountInfo) -> Result<(Pubkey, Pubkey)> {
+    let data = account.try_borrow_data()?;
+    require!(data.len() >= 64, MatchOfferError::InvalidTokenEscrowAccount);
+    let mint = Pubkey::new_from_array(
+        data[0..32]
+            .try_into()
+            .map_err(|_| error!(MatchOfferError::InvalidTokenEscrowAccount))?,
+    );
+    let owner = Pubkey::new_from_array(
+        data[32..64]
+            .try_into()
+            .map_err(|_| error!(MatchOfferError::InvalidTokenEscrowAccount))?,
+    );
+    Ok((mint, owner))
+}
+
+fn token_account_amount(account: &AccountInfo) -> Result<u64> {
+    let data = account.try_borrow_data()?;
+    require!(data.len() >= 72, MatchOfferError::InvalidTokenEscrowAccount);
+    Ok(u64::from_le_bytes(
+        data[64..72]
+            .try_into()
+            .map_err(|_| error!(MatchOfferError::InvalidTokenEscrowAccount))?,
+    ))
+}
+
+fn token_transfer_instruction(
+    source: Pubkey,
+    destination: Pubkey,
+    authority: Pubkey,
+    amount: u64,
+) -> Instruction {
+    let mut data = Vec::with_capacity(9);
+    data.push(3); // SPL TokenInstruction::Transfer
+    data.extend_from_slice(&amount.to_le_bytes());
+    Instruction {
+        program_id: token_program_id(),
+        accounts: vec![
+            AccountMeta::new(source, false),
+            AccountMeta::new(destination, false),
+            AccountMeta::new_readonly(authority, true),
+        ],
+        data,
+    }
+}
+
+fn token_close_account_instruction(
+    account: Pubkey,
+    destination: Pubkey,
+    authority: Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: token_program_id(),
+        accounts: vec![
+            AccountMeta::new(account, false),
+            AccountMeta::new(destination, false),
+            AccountMeta::new_readonly(authority, true),
+        ],
+        data: vec![9], // SPL TokenInstruction::CloseAccount
+    }
 }
 
 fn compute_fee(amount: u64, fee_bps: u16) -> Result<u64> {
@@ -114,6 +224,7 @@ pub struct OfferMatched {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct SettlePaymentArgs {
     pub bid_price: u64,
+    pub token_amount: u64,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -122,6 +233,10 @@ pub struct CommitMatchedOfferArgs {
     pub payment_routing_policy: Pubkey,
     pub protocol_treasury: Pubkey,
     pub operator_treasury: Pubkey,
+    pub token_amount: u64,
+    pub token_escrow_authority: Pubkey,
+    pub token_escrow_account: Pubkey,
+    pub buyer_token_account: Pubkey,
     pub escrow_index: u8,
 }
 
@@ -137,6 +252,11 @@ pub mod system_match_offer {
             serde_json::from_slice(&args_p).map_err(|_| error!(MatchOfferError::InvalidArgs))?;
         let buyer =
             Pubkey::from_str(&args.buyer).map_err(|_| error!(MatchOfferError::InvalidArgs))?;
+        let listing_entity = if args.listing_entity.trim().is_empty() {
+            Pubkey::default()
+        } else {
+            Pubkey::from_str(&args.listing_entity).map_err(|_| error!(MatchOfferError::InvalidArgs))?
+        };
 
         require!(
             args.current_timestamp > 0,
@@ -194,6 +314,11 @@ pub mod system_match_offer {
         require!(
             buyer_clearance.buyer == buyer,
             MatchOfferError::ClearanceMismatch
+        );
+        require!(
+            buyer_clearance.listing_entity == Pubkey::default()
+                || buyer_clearance.listing_entity == listing_entity,
+            MatchOfferError::ClearanceEntityMismatch
         );
         if buyer_clearance.expires_at > 0 {
             require!(
@@ -293,7 +418,7 @@ pub mod system_match_offer {
             total_fee <= args.bid_price,
             MatchOfferError::InvalidPaymentFeeConfiguration
         );
-        let seller_net_amount = args
+        let _seller_net_amount = args
             .bid_price
             .checked_sub(total_fee)
             .ok_or_else(|| error!(MatchOfferError::InvalidPaymentFeeConfiguration))?;
@@ -381,23 +506,21 @@ pub mod system_match_offer {
             let mut data: &[u8] = &ctx.accounts.asset_registry.try_borrow_data()?;
             AssetRegistry::try_deserialize(&mut data)?
         };
+        let deal_terms = {
+            let mut data: &[u8] = &ctx.accounts.deal_terms.try_borrow_data()?;
+            DealTerms::try_deserialize(&mut data)?
+        };
         let payment_routing_policy = {
             let mut data: &[u8] = &ctx.accounts.payment_routing_policy.try_borrow_data()?;
             PaymentRoutingPolicy::try_deserialize(&mut data)?
         };
 
         // NOTE: is_sold guard removed – on the base layer the AssetRegistry
-        // commit and SettlePayment intent run in the same Delegation batch,
-        // so the committed AssetRegistry still shows is_sold = false.
-        // Safety: SettlePayment is only reachable via CommitMatchedOffer,
-        // which itself is only callable after MatchOffer sets is_sold = true.
-        // require!(asset_registry.is_sold, MatchOfferError::AssetNotSold);
-        // NOTE: The escrow authority is the buyer who funded the intent, 
-        // not the asset_registry.owner (who is the seller). 
-        // require!(
-        //     ctx.accounts.escrow_auth.key == &asset_registry.owner,
-        //     MatchOfferError::PaymentEscrowAuthorityMismatch
-        // );
+        require!(asset_registry.is_sold, MatchOfferError::AssetNotSold);
+        require!(
+            ctx.accounts.escrow_auth.key == &asset_registry.owner,
+            MatchOfferError::PaymentEscrowAuthorityMismatch
+        );
         require!(
             ctx.accounts.seller_payout.key == &asset_registry.seller_payout,
             MatchOfferError::SellerPayoutMismatch
@@ -492,6 +615,193 @@ pub mod system_match_offer {
             )?;
         }
 
+        if args.token_amount > 0 {
+            let (expected_authority, bump) =
+                token_escrow_authority(ctx.accounts.asset_registry.key);
+            require!(
+                deal_terms.token_mint != Pubkey::default(),
+                MatchOfferError::DealTermsMismatch
+            );
+            require!(
+                args.token_amount == deal_terms.token_amount,
+                MatchOfferError::TokenAmountMismatch
+            );
+            require!(
+                ctx.accounts.token_escrow_authority.key == &expected_authority,
+                MatchOfferError::InvalidTokenEscrowAuthority
+            );
+            require!(
+                ctx.accounts.token_escrow.is_writable,
+                MatchOfferError::TokenEscrowNotWritable
+            );
+            require!(
+                ctx.accounts.buyer_token_account.is_writable,
+                MatchOfferError::BuyerTokenAccountNotWritable
+            );
+            require!(
+                ctx.accounts.token_program.key == &token_program_id(),
+                MatchOfferError::InvalidTokenProgram
+            );
+            require!(
+                ctx.accounts.token_escrow.key
+                    == &associated_token_address(&expected_authority, &deal_terms.token_mint),
+                MatchOfferError::InvalidTokenEscrowAccount
+            );
+            require!(
+                ctx.accounts.buyer_token_account.key
+                    == &associated_token_address(&asset_registry.owner, &deal_terms.token_mint),
+                MatchOfferError::InvalidBuyerTokenAccount
+            );
+
+            let (escrow_mint, escrow_owner) =
+                token_account_mint_owner(&ctx.accounts.token_escrow.to_account_info())?;
+            require!(
+                escrow_mint == deal_terms.token_mint && escrow_owner == expected_authority,
+                MatchOfferError::InvalidTokenEscrowAccount
+            );
+            let (buyer_mint, buyer_owner) =
+                token_account_mint_owner(&ctx.accounts.buyer_token_account.to_account_info())?;
+            require!(
+                buyer_mint == deal_terms.token_mint && buyer_owner == asset_registry.owner,
+                MatchOfferError::InvalidBuyerTokenAccount
+            );
+
+            let asset_registry_key = ctx.accounts.asset_registry.key();
+            let signer_seeds: &[&[u8]] = &[
+                b"listing-token-escrow",
+                asset_registry_key.as_ref(),
+                &[bump],
+            ];
+            invoke_signed(
+                &token_transfer_instruction(
+                    *ctx.accounts.token_escrow.key,
+                    *ctx.accounts.buyer_token_account.key,
+                    expected_authority,
+                    args.token_amount,
+                ),
+                &[
+                    ctx.accounts.token_escrow.to_account_info(),
+                    ctx.accounts.buyer_token_account.to_account_info(),
+                    ctx.accounts.token_escrow_authority.to_account_info(),
+                    ctx.accounts.token_program.to_account_info(),
+                ],
+                &[signer_seeds],
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn refund_cancelled_listing_tokens(
+        ctx: Context<RefundCancelledListingTokens>,
+    ) -> Result<()> {
+        let asset_registry = {
+            let mut data: &[u8] = &ctx.accounts.asset_registry.try_borrow_data()?;
+            AssetRegistry::try_deserialize(&mut data)?
+        };
+        let deal_terms = {
+            let mut data: &[u8] = &ctx.accounts.deal_terms.try_borrow_data()?;
+            DealTerms::try_deserialize(&mut data)?
+        };
+
+        require!(
+            asset_registry.owner != Pubkey::default(),
+            MatchOfferError::ListingNotInitialized
+        );
+        require!(!asset_registry.is_sold, MatchOfferError::AssetAlreadySold);
+        require!(
+            ctx.accounts.owner.key == &asset_registry.owner,
+            MatchOfferError::OwnerNotSigner
+        );
+        require!(
+            deal_terms.token_mint != Pubkey::default() && deal_terms.token_amount > 0,
+            MatchOfferError::DealTermsMismatch
+        );
+        require!(
+            ctx.accounts.token_program.key == &token_program_id(),
+            MatchOfferError::InvalidTokenProgram
+        );
+
+        let (expected_authority, bump) =
+            token_escrow_authority(ctx.accounts.asset_registry.key);
+        require!(
+            ctx.accounts.token_escrow_authority.key == &expected_authority,
+            MatchOfferError::InvalidTokenEscrowAuthority
+        );
+        require!(
+            ctx.accounts.token_escrow.is_writable,
+            MatchOfferError::TokenEscrowNotWritable
+        );
+        require!(
+            ctx.accounts.owner_token_account.is_writable,
+            MatchOfferError::BuyerTokenAccountNotWritable
+        );
+        require!(
+            ctx.accounts.token_escrow.key
+                == &associated_token_address(&expected_authority, &deal_terms.token_mint),
+            MatchOfferError::InvalidTokenEscrowAccount
+        );
+        require!(
+            ctx.accounts.owner_token_account.key
+                == &associated_token_address(&asset_registry.owner, &deal_terms.token_mint),
+            MatchOfferError::InvalidBuyerTokenAccount
+        );
+
+        let (escrow_mint, escrow_owner) =
+            token_account_mint_owner(&ctx.accounts.token_escrow.to_account_info())?;
+        require!(
+            escrow_mint == deal_terms.token_mint && escrow_owner == expected_authority,
+            MatchOfferError::InvalidTokenEscrowAccount
+        );
+        let (owner_mint, owner_token_owner) =
+            token_account_mint_owner(&ctx.accounts.owner_token_account.to_account_info())?;
+        require!(
+            owner_mint == deal_terms.token_mint && owner_token_owner == asset_registry.owner,
+            MatchOfferError::InvalidBuyerTokenAccount
+        );
+
+        let escrow_amount = token_account_amount(&ctx.accounts.token_escrow.to_account_info())?;
+        require!(
+            escrow_amount >= deal_terms.token_amount,
+            MatchOfferError::TokenEscrowBalanceTooLow
+        );
+
+        let asset_registry_key = ctx.accounts.asset_registry.key();
+        let signer_seeds: &[&[u8]] = &[
+            b"listing-token-escrow",
+            asset_registry_key.as_ref(),
+            &[bump],
+        ];
+        invoke_signed(
+            &token_transfer_instruction(
+                *ctx.accounts.token_escrow.key,
+                *ctx.accounts.owner_token_account.key,
+                expected_authority,
+                escrow_amount,
+            ),
+            &[
+                ctx.accounts.token_escrow.to_account_info(),
+                ctx.accounts.owner_token_account.to_account_info(),
+                ctx.accounts.token_escrow_authority.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+            ],
+            &[signer_seeds],
+        )?;
+        invoke_signed(
+            &token_close_account_instruction(
+                *ctx.accounts.token_escrow.key,
+                *ctx.accounts.owner.key,
+                expected_authority,
+            ),
+            &[
+                ctx.accounts.token_escrow.to_account_info(),
+                ctx.accounts.owner.to_account_info(),
+                ctx.accounts.token_escrow_authority.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+            ],
+            &[signer_seeds],
+        )?;
+
         Ok(())
     }
 
@@ -507,6 +817,7 @@ pub mod system_match_offer {
         let settle_payment_args = crate::instruction::SettlePayment {
             args: SettlePaymentArgs {
                 bid_price: args.bid_price,
+                token_amount: args.token_amount,
             },
         }
         .data();
@@ -519,6 +830,10 @@ pub mod system_match_offer {
             accounts: vec![
                 ShortAccountMeta {
                     pubkey: ctx.accounts.asset_registry.key(),
+                    is_writable: false,
+                },
+                ShortAccountMeta {
+                    pubkey: ctx.accounts.deal_terms.key(),
                     is_writable: false,
                 },
                 ShortAccountMeta {
@@ -541,6 +856,22 @@ pub mod system_match_offer {
                     pubkey: system_program::ID,
                     is_writable: false,
                 },
+                ShortAccountMeta {
+                    pubkey: args.token_escrow_authority,
+                    is_writable: false,
+                },
+                ShortAccountMeta {
+                    pubkey: args.token_escrow_account,
+                    is_writable: args.token_amount > 0,
+                },
+                ShortAccountMeta {
+                    pubkey: args.buyer_token_account,
+                    is_writable: args.token_amount > 0,
+                },
+                ShortAccountMeta {
+                    pubkey: token_program_id(),
+                    is_writable: false,
+                },
             ],
         };
 
@@ -549,7 +880,8 @@ pub mod system_match_offer {
             ctx.accounts.magic_context.to_account_info(),
             ctx.accounts.magic_program.to_account_info(),
         )
-        .add_standalone_actions([settle_payment])
+        .commit_and_undelegate(&[ctx.accounts.asset_registry.to_account_info()])
+        .add_post_commit_actions([settle_payment])
         .build_and_invoke()?;
 
         Ok(())
@@ -572,6 +904,8 @@ pub mod system_match_offer {
 pub struct SettlePayment<'info> {
     /// CHECK: AssetRegistry component account committed back to Solana before this handler runs.
     pub asset_registry: UncheckedAccount<'info>,
+    /// CHECK: DealTerms component account for the matched listing.
+    pub deal_terms: UncheckedAccount<'info>,
     /// CHECK: PaymentRoutingPolicy component account on Solana.
     pub payment_routing_policy: UncheckedAccount<'info>,
     #[account(mut)]
@@ -584,11 +918,41 @@ pub struct SettlePayment<'info> {
     /// CHECK: Operator treasury wallet verified against PaymentRoutingPolicy.
     pub operator_treasury: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
+    /// CHECK: PDA authority over the listing's escrow token account.
+    pub token_escrow_authority: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Token account holding the listed asset until payment settles.
+    pub token_escrow: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Buyer token account receiving the listed asset.
+    pub buyer_token_account: UncheckedAccount<'info>,
+    /// CHECK: SPL Token program.
+    pub token_program: UncheckedAccount<'info>,
     /// CHECK: Injected by Magic Actions; used to identify the funded escrow authority.
     pub escrow_auth: UncheckedAccount<'info>,
     #[account(mut)]
     /// CHECK: Magic escrow PDA injected by the validator for this action.
     pub escrow: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct RefundCancelledListingTokens<'info> {
+    /// CHECK: AssetRegistry component account for the active listing.
+    pub asset_registry: UncheckedAccount<'info>,
+    /// CHECK: DealTerms component account for the active listing.
+    pub deal_terms: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    /// CHECK: PDA authority over the listing's escrow token account.
+    pub token_escrow_authority: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Token account holding the listed asset until cancellation or match settlement.
+    pub token_escrow: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Owner token account receiving the refunded asset.
+    pub owner_token_account: UncheckedAccount<'info>,
+    /// CHECK: SPL Token program.
+    pub token_program: UncheckedAccount<'info>,
 }
 
 #[commit]
@@ -599,6 +963,8 @@ pub struct CommitMatchedOffer<'info> {
     #[account(mut)]
     /// CHECK: Delegated AssetRegistry component account.
     pub asset_registry: UncheckedAccount<'info>,
+    /// CHECK: Delegated DealTerms component account for the matched listing.
+    pub deal_terms: UncheckedAccount<'info>,
     #[account(mut)]
     /// CHECK: Delegated BuyerClearance component account.
     pub buyer_clearance: UncheckedAccount<'info>,

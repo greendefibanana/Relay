@@ -239,5 +239,6 @@ export function parseIssueClearanceBody(body: JsonBody): IssueClearanceInput {
       [1, 2, 3],
     ),
     expiresAt: expiresAt == null ? undefined : String(expiresAt),
+    listingEntity: parseOptionalString(body.listingEntity, "listingEntity"),
   };
 }

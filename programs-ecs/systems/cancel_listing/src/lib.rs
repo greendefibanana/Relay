@@ -2,7 +2,7 @@ use bolt_lang::*;
 use relay_component_types::{consent_status, transfer_restriction, AssetRegistry, DealTerms};
 use serde::Deserialize;
 
-declare_id!("FRfp37UqvopSMDPJ4wo4yraaDm7k4MN7zCU2pHEmTbXm");
+declare_id!("AwvMZG7WWjUNzLVUZFa5JRoCHz6cJ1nu2zxTCi3xYgKc");
 
 #[derive(Deserialize, Clone)]
 pub struct CancelListingArgs {

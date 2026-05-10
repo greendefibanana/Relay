@@ -20,14 +20,21 @@ test-ledger-*/
 .devnet-*.json
 .relay-state.*.json
 *-keypair.json
+**/keypair.json
 
 # Logs & Temporary Files
 *.log
 api-crash-logs.txt
 ephemeral-*.err.log
 ephemeral-*.out.log
+devnet_logs.txt
+tx-logs.json
+settle-logs.json
+rpc_output.txt
+codex-session.jsonl
+history.txt
+skills.tar.gz
 
 # Misc
 .anchor/
 .avm/
-

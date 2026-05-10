@@ -1,5 +1,9 @@
 use std::str::FromStr;
 
+use anchor_lang::solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program::invoke,
+};
 use bolt_lang::*;
 use relay_component_types::{
     asset_type, consent_status, parse_optional_pubkey, settlement_status,
@@ -84,6 +88,62 @@ pub enum CreateListingError {
     OwnerNotSigner,
     #[msg("Listing has already been initialised for this entity.")]
     ListingAlreadyInitialized,
+    #[msg("Token escrow accounts are required when a token mint is supplied.")]
+    MissingTokenEscrowAccounts,
+    #[msg("Token program account is invalid.")]
+    InvalidTokenProgram,
+    #[msg("Seller token account does not match the listing owner and mint.")]
+    InvalidSellerTokenAccount,
+    #[msg("Escrow token account does not match the listing escrow authority and mint.")]
+    InvalidEscrowTokenAccount,
+}
+
+fn token_program_id() -> Pubkey {
+    Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap()
+}
+
+fn associated_token_program_id() -> Pubkey {
+    Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap()
+}
+
+fn match_offer_program_id() -> Pubkey {
+    Pubkey::from_str("Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585").unwrap()
+}
+
+fn associated_token_address(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[owner.as_ref(), token_program_id().as_ref(), mint.as_ref()],
+        &associated_token_program_id(),
+    )
+    .0
+}
+
+fn token_escrow_authority(asset_registry: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[b"listing-token-escrow", asset_registry.as_ref()],
+        &match_offer_program_id(),
+    )
+    .0
+}
+
+fn token_transfer_instruction(
+    source: Pubkey,
+    destination: Pubkey,
+    authority: Pubkey,
+    amount: u64,
+) -> Instruction {
+    let mut data = Vec::with_capacity(9);
+    data.push(3); // SPL TokenInstruction::Transfer
+    data.extend_from_slice(&amount.to_le_bytes());
+    Instruction {
+        program_id: token_program_id(),
+        accounts: vec![
+            AccountMeta::new(source, false),
+            AccountMeta::new(destination, false),
+            AccountMeta::new_readonly(authority, true),
+        ],
+        data,
+    }
 }
 
 #[event]
@@ -97,16 +157,18 @@ pub struct ListingCreated {
 #[system]
 pub mod system_create_listing {
     pub fn execute(ctx: Context<Components>, args_p: Vec<u8>) -> Result<Components> {
+        const COMPONENT_ACCOUNT_COUNT: usize = 2;
+
         let args: CreateListingArgs =
             serde_json::from_slice(&args_p).map_err(|_| error!(CreateListingError::InvalidArgs))?;
         let owner =
             Pubkey::from_str(&args.owner).map_err(|_| error!(CreateListingError::InvalidOwner))?;
-        let owner_signer_matches = (ctx.accounts.authority.key == &owner
-            && ctx.accounts.authority.is_signer)
-            || ctx
-                .remaining_accounts
-                .iter()
-                .any(|account| account.key == &owner && account.is_signer);
+        let owner_signer_matches =
+            (ctx.accounts.authority.key == &owner && ctx.accounts.authority.is_signer)
+                || ctx
+                    .remaining_accounts
+                    .iter()
+                    .any(|account| account.key == &owner && account.is_signer);
         require!(
             owner_signer_matches,
             CreateListingError::OwnerNotSigner
@@ -193,6 +255,66 @@ pub mod system_create_listing {
                 required_consent_authority != Pubkey::default(),
                 CreateListingError::InvalidRequiredConsentAuthority
             );
+        }
+
+        if token_mint != Pubkey::default() {
+            let owner_signer = ctx
+                .remaining_accounts
+                .get(COMPONENT_ACCOUNT_COUNT)
+                .cloned()
+                .ok_or_else(|| error!(CreateListingError::MissingTokenEscrowAccounts))?;
+            let seller_token_account = ctx
+                .remaining_accounts
+                .get(COMPONENT_ACCOUNT_COUNT + 1)
+                .cloned()
+                .ok_or_else(|| error!(CreateListingError::MissingTokenEscrowAccounts))?;
+            let escrow_token_account = ctx
+                .remaining_accounts
+                .get(COMPONENT_ACCOUNT_COUNT + 2)
+                .cloned()
+                .ok_or_else(|| error!(CreateListingError::MissingTokenEscrowAccounts))?;
+            let token_program = ctx
+                .remaining_accounts
+                .get(COMPONENT_ACCOUNT_COUNT + 3)
+                .cloned()
+                .ok_or_else(|| error!(CreateListingError::MissingTokenEscrowAccounts))?;
+
+            require!(
+                token_program.key == &token_program_id(),
+                CreateListingError::InvalidTokenProgram
+            );
+            require!(
+                owner_signer.key == &owner && owner_signer.is_signer,
+                CreateListingError::OwnerNotSigner
+            );
+
+            let asset_registry_key = ctx.accounts.asset_registry.to_account_info().key();
+            let expected_seller_token = associated_token_address(&owner, &token_mint);
+            let expected_escrow_token =
+                associated_token_address(&token_escrow_authority(&asset_registry_key), &token_mint);
+            require!(
+                seller_token_account.key == &expected_seller_token,
+                CreateListingError::InvalidSellerTokenAccount
+            );
+            require!(
+                escrow_token_account.key == &expected_escrow_token,
+                CreateListingError::InvalidEscrowTokenAccount
+            );
+
+            invoke(
+                &token_transfer_instruction(
+                    *seller_token_account.key,
+                    *escrow_token_account.key,
+                    owner,
+                    args.token_amount,
+                ),
+                &[
+                    seller_token_account.to_account_info(),
+                    escrow_token_account.to_account_info(),
+                    owner_signer.to_account_info(),
+                    token_program.to_account_info(),
+                ],
+            )?;
         }
 
         let asset_registry = &mut ctx.accounts.asset_registry;
