@@ -20,7 +20,7 @@ import {
   parseSettlementAttestBody,
 } from "./request-validation.js";
 
-const port = Number(process.env.API_PORT || "3030");
+const port = Number(process.env.PORT || process.env.API_PORT || "3030");
 const allowedOrigins = (process.env.RELAY_ALLOWED_ORIGIN || "http://localhost:3000")
   .split(",")
   .map((origin) => origin.trim())

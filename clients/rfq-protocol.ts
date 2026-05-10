@@ -397,6 +397,21 @@ function loadKeypair(walletPath: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(bytes));
 }
 
+function keypairEnvForWalletPathEnv(walletPathEnv: string): string {
+  return walletPathEnv === "WALLET_PATH"
+    ? "WALLET_KEYPAIR_JSON"
+    : walletPathEnv.replace(/_WALLET_PATH$/, "_KEYPAIR_JSON");
+}
+
+function loadKeypairFromEnv(envName: string): Keypair | null {
+  const raw = optionalEnv(envName);
+  if (!raw) {
+    return null;
+  }
+  const bytes = JSON.parse(raw) as number[];
+  return Keypair.fromSecretKey(Uint8Array.from(bytes));
+}
+
 type LoadedSigner = {
   publicKey: PublicKey;
   keypair: Keypair;
@@ -407,6 +422,11 @@ function resolveConfiguredAuthorityPublicKey(
   pubkeyEnv: string,
   fallbackPublicKey: PublicKey,
 ): PublicKey {
+  const envKeypair = loadKeypairFromEnv(keypairEnvForWalletPathEnv(walletPathEnv));
+  if (envKeypair) {
+    return envKeypair.publicKey;
+  }
+
   const walletPath = optionalEnv(walletPathEnv);
   if (walletPath) {
     return loadKeypair(walletPath).publicKey;
@@ -421,6 +441,11 @@ function resolveConfiguredSigner(
   pubkeyEnv: string,
   fallbackKeypair: Keypair,
 ): LoadedSigner {
+  const envKeypair = loadKeypairFromEnv(keypairEnvForWalletPathEnv(walletPathEnv));
+  if (envKeypair) {
+    return { publicKey: envKeypair.publicKey, keypair: envKeypair };
+  }
+
   const walletPath = optionalEnv(walletPathEnv);
   if (walletPath) {
     const keypair = loadKeypair(walletPath);
@@ -2227,11 +2252,27 @@ function resolveBuyerPubkey(): PublicKey {
     return loadKeypair(buyerWalletPath).publicKey;
   }
 
+  const buyerKeypair = loadKeypairFromEnv("BUYER_KEYPAIR_JSON");
+  if (buyerKeypair) {
+    return buyerKeypair.publicKey;
+  }
+
+  const runtimeKeypair = loadKeypairFromEnv("WALLET_KEYPAIR_JSON");
+  if (runtimeKeypair) {
+    return runtimeKeypair.publicKey;
+  }
+
   const walletPath = env("WALLET_PATH", DEFAULT_WALLET_PATH);
   return loadKeypair(walletPath).publicKey;
 }
 
 function runtimeWallet(): LocalWallet {
+  const envKeypair = loadKeypairFromEnv("WALLET_KEYPAIR_JSON");
+  if (envKeypair) {
+    process.env.ANCHOR_PROVIDER_URL ??= env("SOLANA_RPC_URL", DEFAULT_SOLANA_RPC_URL);
+    return new LocalWallet(envKeypair);
+  }
+
   const walletPath = env("WALLET_PATH", DEFAULT_WALLET_PATH);
   process.env.ANCHOR_WALLET ??= walletPath;
   process.env.ANCHOR_PROVIDER_URL ??= env("SOLANA_RPC_URL", DEFAULT_SOLANA_RPC_URL);
