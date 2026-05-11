@@ -1,6 +1,6 @@
 {
   "framework": "create-react-app",
-  "installCommand": "npm --prefix Frontend install",
+  "installCommand": "npm --prefix Frontend ci --legacy-peer-deps --engine-strict=false",
   "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm --prefix Frontend run build",
   "outputDirectory": "Frontend/build",
   "rewrites": [
