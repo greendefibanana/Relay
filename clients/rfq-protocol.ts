@@ -806,7 +806,13 @@ async function getAuthTokenNode(
   publicKey: PublicKey,
   signMessage: (message: Uint8Array) => Promise<Uint8Array>,
 ): Promise<string> {
-  const bs58 = require("bs58") as { encode(input: Uint8Array): string };
+  type Bs58Codec = { encode(input: Uint8Array): string };
+  const bs58Module = require("bs58") as Bs58Codec | { default?: Bs58Codec };
+  const bs58 = "encode" in bs58Module ? bs58Module : bs58Module.default;
+  if (!bs58 || typeof bs58.encode !== "function") {
+    throw new Error("Unable to load bs58 encoder.");
+  }
+
   const challengeResponse = await fetch(`${rpcUrl}/auth/challenge?pubkey=${publicKey.toString()}`);
   const challengeJson = await readJsonResponse<{ challenge?: string; error?: string }>(
     challengeResponse,
