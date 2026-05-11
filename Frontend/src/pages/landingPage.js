@@ -12,6 +12,7 @@ import Discord from '../assets/images/discord.png';
 import MainpurposeComponents from "../components/mainPurposeComponents";
 import HeaderComponents from "../components/headerComponents";
 
+const SHOW_TEAM_SECTION = false;
 
 
 const LandingPage = () => {
@@ -32,7 +33,7 @@ const LandingPage = () => {
 
                 <RoadMapComponents/>
 
-                <OurTokennomicsComponents/>
+                {SHOW_TEAM_SECTION && <OurTokennomicsComponents/>}
 
                 <ContactSectionComponents/>
 
