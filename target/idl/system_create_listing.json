@@ -1,0 +1,213 @@
+{
+  "address": "FgVyAJoCFkym9QjD8NsQ3SbHVkJEbECjYHJ7PpdetkCN",
+  "metadata": {
+    "name": "system_create_listing",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ListingCreated",
+      "discriminator": [
+        94,
+        164,
+        167,
+        255,
+        246,
+        186,
+        12,
+        96
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "CreateListing args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidOwner",
+      "msg": "Owner pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidMinPrice",
+      "msg": "Minimum price must be greater than zero."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidTokenAmount",
+      "msg": "Token amount must be greater than zero."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidAssetType",
+      "msg": "Asset type is unsupported."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidTokenMint",
+      "msg": "Token mint pubkey is invalid."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidVestingSourceProgram",
+      "msg": "Vesting source program pubkey is invalid."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidVestingSourcePosition",
+      "msg": "Vesting source position pubkey is invalid."
+    },
+    {
+      "code": 6008,
+      "name": "InvalidVestingSchedule",
+      "msg": "Vesting schedule is invalid."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidUnlockedAmount",
+      "msg": "Unlocked amount exceeds token amount."
+    },
+    {
+      "code": 6010,
+      "name": "InvalidClaimedAmount",
+      "msg": "Claimed amount exceeds token amount."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidPrivateBuyer",
+      "msg": "Private buyer pubkey is invalid."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidTransferRestrictionMode",
+      "msg": "Transfer restriction mode is invalid."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidSettlementMode",
+      "msg": "Settlement mode is invalid."
+    },
+    {
+      "code": 6014,
+      "name": "InvalidRequiredSettlementAttestor",
+      "msg": "Required settlement attestor pubkey is invalid."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidRequiredConsentAuthority",
+      "msg": "Required consent authority pubkey is invalid."
+    },
+    {
+      "code": 6016,
+      "name": "OwnerNotSigner",
+      "msg": "Signer does not match the listing owner."
+    },
+    {
+      "code": 6017,
+      "name": "ListingAlreadyInitialized",
+      "msg": "Listing has already been initialised for this entity."
+    },
+    {
+      "code": 6018,
+      "name": "MissingTokenEscrowAccounts",
+      "msg": "Token escrow accounts are required when a token mint is supplied."
+    },
+    {
+      "code": 6019,
+      "name": "InvalidTokenProgram",
+      "msg": "Token program account is invalid."
+    },
+    {
+      "code": 6020,
+      "name": "InvalidSellerTokenAccount",
+      "msg": "Seller token account does not match the listing owner and mint."
+    },
+    {
+      "code": 6021,
+      "name": "InvalidEscrowTokenAccount",
+      "msg": "Escrow token account does not match the listing escrow authority and mint."
+    }
+  ],
+  "types": [
+    {
+      "name": "ListingCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_type",
+            "type": "u8"
+          },
+          {
+            "name": "min_price",
+            "type": "u64"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

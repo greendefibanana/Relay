@@ -1,0 +1,619 @@
+{
+  "address": "23vDPBsuhfMEjmySL3p7DWTzXxX6j33xtaWj9VkbM5gg",
+  "metadata": {
+    "name": "deal_terms",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "delegate",
+      "discriminator": [
+        90,
+        147,
+        75,
+        178,
+        85,
+        88,
+        4,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "entity"
+        },
+        {
+          "name": "account",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "buffer",
+          "writable": true
+        },
+        {
+          "name": "delegation_record",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata",
+          "writable": true
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "commit_frequency_ms",
+          "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "destroy",
+      "discriminator": [
+        157,
+        40,
+        96,
+        3,
+        135,
+        203,
+        143,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "receiver",
+          "writable": true
+        },
+        {
+          "name": "entity"
+        },
+        {
+          "name": "component",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
+        },
+        {
+          "name": "component_program_data"
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
+        },
+        {
+          "name": "entity"
+        },
+        {
+          "name": "authority"
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "delegated_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "undelegate",
+      "discriminator": [
+        131,
+        148,
+        180,
+        198,
+        91,
+        104,
+        42,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "delegated_account",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update",
+      "discriminator": [
+        219,
+        200,
+        88,
+        176,
+        158,
+        63,
+        253,
+        127
+      ],
+      "accounts": [
+        {
+          "name": "bolt_component",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "update_with_session",
+      "discriminator": [
+        221,
+        55,
+        212,
+        141,
+        57,
+        85,
+        61,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "bolt_component",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "session_token"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "DealTerms",
+      "discriminator": [
+        111,
+        62,
+        47,
+        216,
+        205,
+        170,
+        129,
+        136
+      ]
+    },
+    {
+      "name": "Entity",
+      "discriminator": [
+        46,
+        157,
+        161,
+        161,
+        254,
+        46,
+        79,
+        24
+      ]
+    },
+    {
+      "name": "SessionToken",
+      "discriminator": [
+        233,
+        4,
+        115,
+        14,
+        46,
+        21,
+        1,
+        15
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "BoltMetadata",
+      "docs": [
+        "Metadata for the component."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DealTerms",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_price",
+            "type": "u64"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "valuation_cap",
+            "type": "u64"
+          },
+          {
+            "name": "token_mint",
+            "docs": [
+              "Underlying token mint for tokenized vesting positions."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vesting_source_program",
+            "docs": [
+              "Vesting program or contract that governs the underlying position."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vesting_source_position",
+            "docs": [
+              "Concrete vesting account / stream / escrow that backs the listing."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vesting_start_ts",
+            "docs": [
+              "Vesting schedule start unix timestamp. 0 for non-vesting assets."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vesting_cliff_ts",
+            "docs": [
+              "Cliff unix timestamp. 0 when no cliff applies."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vesting_end_ts",
+            "docs": [
+              "Vesting end unix timestamp. 0 for non-vesting assets."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "unlocked_amount",
+            "docs": [
+              "Amount currently unlocked and immediately transferable / claimable."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed_amount",
+            "docs": [
+              "Amount already claimed out of the listed vesting position."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "private_buyer",
+            "docs": [
+              "Reserved buyer for private placements. Default pubkey means public listing."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "transfer_restriction_mode",
+            "docs": [
+              "0 = unrestricted, 1 = issuer consent required, 2 = non-transferable."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "settlement_mode",
+            "docs": [
+              "0 = no extra settlement attestation required, 1 = TEE verified transfer,",
+              "2 = escrow release, 3 = issuer / admin approval."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "settlement_status",
+            "docs": [
+              "0 = not required, 1 = pending, 2 = ready for the approved buyer, 3 = consumed."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "approved_buyer",
+            "docs": [
+              "Buyer approved by the settlement attestation step for vesting assets."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_attestor",
+            "docs": [
+              "Off-chain / TEE attestor or operator that prepared settlement."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_expires_at",
+            "docs": [
+              "Unix timestamp when the settlement approval expires. 0 = no expiry."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "required_settlement_attestor",
+            "docs": [
+              "Listing-level authority that is allowed to sign settlement approvals."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_nonce",
+            "docs": [
+              "Monotonic nonce for settlement approvals to prevent replay / stale reuse."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "settlement_proof_id",
+            "docs": [
+              "Unique proof identifier for the currently active settlement approval."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_policy_version",
+            "docs": [
+              "Policy version that authorized the active settlement approval."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "settlement_prepared_at",
+            "docs": [
+              "Unix timestamp when the settlement approval was prepared."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "required_consent_authority",
+            "docs": [
+              "Listing-level authority that is allowed to approve transfer-restricted sales."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "consent_status",
+            "docs": [
+              "0 = not required, 1 = pending, 2 = ready for the approved buyer, 3 = consumed."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "consent_approved_buyer",
+            "docs": [
+              "Buyer approved by issuer / admin consent for restricted transfers."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "consent_authority",
+            "docs": [
+              "Issuer / admin authority that approved the restricted transfer."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "consent_expires_at",
+            "docs": [
+              "Unix timestamp when the transfer consent expires. 0 = no expiry."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "consent_nonce",
+            "docs": [
+              "Monotonic nonce for transfer-consent approvals."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Entity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SessionToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "session_signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "valid_until",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}

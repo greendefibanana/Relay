@@ -1,0 +1,118 @@
+{
+  "address": "AwvMZG7WWjUNzLVUZFa5JRoCHz6cJ1nu2zxTCi3xYgKc",
+  "metadata": {
+    "name": "system_cancel_listing",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ListingCancelled",
+      "discriminator": [
+        11,
+        46,
+        163,
+        10,
+        103,
+        80,
+        139,
+        194
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "CancelListing args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "NotOwner",
+      "msg": "Signer is not the listing owner."
+    },
+    {
+      "code": 6002,
+      "name": "AssetAlreadySold",
+      "msg": "Listing has already been sold and cannot be cancelled."
+    },
+    {
+      "code": 6003,
+      "name": "ListingNotInitialized",
+      "msg": "Listing has not been initialised."
+    }
+  ],
+  "types": [
+    {
+      "name": "ListingCancelled",
+      "docs": [
+        "Event emitted when a listing is cancelled (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_type",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

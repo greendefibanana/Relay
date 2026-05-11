@@ -1,0 +1,181 @@
+{
+  "address": "BrACdZTWSwNSwFexzUcPtobEB5wxMHXxW3Q9GR5i63Rc",
+  "metadata": {
+    "name": "system_attest_vesting_settlement",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "VestingSettlementAttested",
+      "discriminator": [
+        132,
+        49,
+        181,
+        2,
+        154,
+        247,
+        44,
+        94
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "Settlement attestation args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidBuyer",
+      "msg": "Buyer pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "NotVestingAsset",
+      "msg": "Settlement attestation only applies to vesting assets."
+    },
+    {
+      "code": 6003,
+      "name": "AssetAlreadySold",
+      "msg": "Listing has already been sold."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidSettlementMode",
+      "msg": "Listing is missing a supported settlement mode."
+    },
+    {
+      "code": 6005,
+      "name": "MissingRequiredSettlementAttestor",
+      "msg": "This listing is missing a required settlement attestor."
+    },
+    {
+      "code": 6006,
+      "name": "UnauthorizedAttestor",
+      "msg": "The apply authority does not match the listing's required settlement attestor."
+    },
+    {
+      "code": 6007,
+      "name": "PrivateBuyerMismatch",
+      "msg": "This private listing is reserved for a different buyer."
+    },
+    {
+      "code": 6008,
+      "name": "InvalidSettlementNonce",
+      "msg": "Settlement nonce must increase monotonically."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidSettlementProofId",
+      "msg": "Settlement proof id pubkey is invalid."
+    },
+    {
+      "code": 6010,
+      "name": "MissingSettlementProofId",
+      "msg": "Settlement proof id cannot be empty."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidSettlementExpiry",
+      "msg": "Settlement approval must expire in the future."
+    },
+    {
+      "code": 6012,
+      "name": "SettlementPolicyDisabled",
+      "msg": "Settlement policy is disabled."
+    },
+    {
+      "code": 6013,
+      "name": "UnauthorizedByPolicy",
+      "msg": "Settlement attestor is not currently allowed by policy."
+    },
+    {
+      "code": 6014,
+      "name": "TimestampRequired",
+      "msg": "A valid current timestamp is required (must be > 0)."
+    }
+  ],
+  "types": [
+    {
+      "name": "VestingSettlementAttested",
+      "docs": [
+        "Event emitted when a vesting settlement is attested (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "attestor",
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_proof_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "settlement_nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

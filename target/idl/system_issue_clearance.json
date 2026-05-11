@@ -1,0 +1,145 @@
+{
+  "address": "2e7rfeRKU33mGe9ZLRwNTnDKf8yRJttqPcbXgjX4UXxK",
+  "metadata": {
+    "name": "system_issue_clearance",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ClearanceIssued",
+      "discriminator": [
+        134,
+        101,
+        64,
+        33,
+        53,
+        95,
+        161,
+        10
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "IssueClearance args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidBuyer",
+      "msg": "Buyer pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidClearanceType",
+      "msg": "Clearance type must be 1, 2, or 3."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidListingEntity",
+      "msg": "Listing entity pubkey is invalid."
+    },
+    {
+      "code": 6004,
+      "name": "ClearanceAuthorityNotConfigured",
+      "msg": "Clearance authority has not been configured in the settlement policy."
+    },
+    {
+      "code": 6005,
+      "name": "UnauthorizedClearanceAuthority",
+      "msg": "Signer is not the authorized clearance authority."
+    },
+    {
+      "code": 6006,
+      "name": "ClearanceAlreadyIssued",
+      "msg": "Clearance has already been issued for this buyer. Revoke first."
+    }
+  ],
+  "types": [
+    {
+      "name": "ClearanceIssued",
+      "docs": [
+        "Event emitted when clearance is issued (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "clearance_type",
+            "type": "u8"
+          },
+          {
+            "name": "expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "listing_entity",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}

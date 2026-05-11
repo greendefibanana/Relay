@@ -1,0 +1,142 @@
+{
+  "address": "ERJNXy2po3hrkGEJ3XM7hvMg3k2jRP1emb32voWvPNU9",
+  "metadata": {
+    "name": "system_issue_transfer_consent",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "TransferConsentIssued",
+      "discriminator": [
+        164,
+        250,
+        112,
+        202,
+        129,
+        78,
+        165,
+        108
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "Transfer consent args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidBuyer",
+      "msg": "Buyer pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "ConsentNotRequired",
+      "msg": "Transfer consent is not required for this listing."
+    },
+    {
+      "code": 6003,
+      "name": "AssetAlreadySold",
+      "msg": "Listing has already been sold."
+    },
+    {
+      "code": 6004,
+      "name": "MissingRequiredConsentAuthority",
+      "msg": "This listing is missing a required consent authority."
+    },
+    {
+      "code": 6005,
+      "name": "UnauthorizedConsentAuthority",
+      "msg": "The apply authority does not match the listing's required consent authority."
+    },
+    {
+      "code": 6006,
+      "name": "PrivateBuyerMismatch",
+      "msg": "This private listing is reserved for a different buyer."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidConsentNonce",
+      "msg": "Consent nonce must increase monotonically."
+    }
+  ],
+  "types": [
+    {
+      "name": "TransferConsentIssued",
+      "docs": [
+        "Event emitted when transfer consent is granted (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "consent_nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

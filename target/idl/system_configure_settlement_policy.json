@@ -1,0 +1,151 @@
+{
+  "address": "7WTkuFXzdtYdFJGKnFB2oWrViVVpqqtsscULaQo4DXLq",
+  "metadata": {
+    "name": "system_configure_settlement_policy",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "SettlementPolicyConfigured",
+      "discriminator": [
+        19,
+        187,
+        132,
+        89,
+        54,
+        209,
+        224,
+        207
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "Settlement policy args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidPolicyAuthority",
+      "msg": "Policy authority pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidPrimaryAttestor",
+      "msg": "Primary attestor pubkey is invalid."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidSecondaryAttestor",
+      "msg": "Secondary attestor pubkey is invalid."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidTertiaryAttestor",
+      "msg": "Tertiary attestor pubkey is invalid."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidVersion",
+      "msg": "Settlement policy version must increase monotonically."
+    },
+    {
+      "code": 6006,
+      "name": "UnauthorizedPolicyAuthority",
+      "msg": "Settlement policy authority is not allowed to update this policy."
+    },
+    {
+      "code": 6007,
+      "name": "MissingEnabledAttestor",
+      "msg": "At least one settlement attestor must be configured when the policy is enabled."
+    },
+    {
+      "code": 6008,
+      "name": "InvalidClearanceAuthority",
+      "msg": "Clearance authority pubkey is invalid."
+    }
+  ],
+  "types": [
+    {
+      "name": "SettlementPolicyConfigured",
+      "docs": [
+        "Event emitted when the settlement policy is updated (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "version",
+            "type": "u64"
+          },
+          {
+            "name": "is_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "clearance_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}

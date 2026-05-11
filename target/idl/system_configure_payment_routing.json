@@ -1,0 +1,156 @@
+{
+  "address": "Gnwd2U3g37AiZ5k4rphRnKHBx7UHujQupaE7XArMY8vt",
+  "metadata": {
+    "name": "system_configure_payment_routing",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "PaymentRoutingConfigured",
+      "discriminator": [
+        224,
+        188,
+        185,
+        63,
+        210,
+        229,
+        238,
+        4
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArgs",
+      "msg": "Payment routing args could not be decoded."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidPolicyAuthority",
+      "msg": "Policy authority pubkey is invalid."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidProtocolTreasury",
+      "msg": "Protocol treasury pubkey is invalid."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidOperatorTreasury",
+      "msg": "Operator treasury pubkey is invalid."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidVersion",
+      "msg": "Payment routing version must increase monotonically."
+    },
+    {
+      "code": 6005,
+      "name": "UnauthorizedPolicyAuthority",
+      "msg": "Payment routing authority is not allowed to update this policy."
+    },
+    {
+      "code": 6006,
+      "name": "UnsupportedPaymentMode",
+      "msg": "Only native SOL payment mode is currently supported."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidFeeConfiguration",
+      "msg": "Total payment fees cannot exceed 10000 basis points."
+    },
+    {
+      "code": 6008,
+      "name": "MissingProtocolTreasury",
+      "msg": "Protocol treasury is required when protocol fees are enabled."
+    },
+    {
+      "code": 6009,
+      "name": "MissingOperatorTreasury",
+      "msg": "Operator treasury is required when operator fees are enabled."
+    }
+  ],
+  "types": [
+    {
+      "name": "PaymentRoutingConfigured",
+      "docs": [
+        "Event emitted when payment routing policy is updated (I-2)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "version",
+            "type": "u64"
+          },
+          {
+            "name": "is_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "payment_mode",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

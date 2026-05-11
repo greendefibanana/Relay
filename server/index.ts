@@ -1,4 +1,6 @@
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { URL } from "node:url";
 import {
   executeAttestVestingSettlement,
@@ -87,6 +89,17 @@ async function readJsonBody(req: http.IncomingMessage): Promise<Record<string, u
 
 function notFound(res: http.ServerResponse): void {
   sendJson(res, 404, { error: "Not found" });
+}
+
+function logApiError(error: unknown): void {
+  const message = `\nAPI ERROR: ${error instanceof Error ? error.stack : String(error)}`;
+  const logPath = process.env.RELAY_ERROR_LOG_PATH || path.join(process.cwd(), "api-crash-logs.txt");
+
+  try {
+    fs.appendFileSync(logPath, message);
+  } catch (logError) {
+    console.error("Failed to write API error log:", logError);
+  }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -277,7 +290,7 @@ const server = http.createServer(async (req, res) => {
     notFound(res);
   } catch (error) {
     console.error("API Request Error:", error);
-    require("fs").appendFileSync("C:/Users/ezevi/Documents/Relay/api-crash-logs.txt", "\nAPI ERROR: " + (error instanceof Error ? error.stack : String(error)));
+    logApiError(error);
     const message = error instanceof Error ? error.message : String(error);
     const status =
       error instanceof BadRequestError || error instanceof UnauthorizedError

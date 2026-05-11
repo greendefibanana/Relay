@@ -1,0 +1,567 @@
+{
+  "address": "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585",
+  "metadata": {
+    "name": "system_match_offer",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "__bolt_context_hint",
+      "discriminator": [
+        3,
+        64,
+        112,
+        87,
+        246,
+        10,
+        210,
+        178
+      ],
+      "accounts": [],
+      "args": []
+    },
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "commit_matched_offer",
+      "discriminator": [
+        45,
+        15,
+        218,
+        115,
+        179,
+        114,
+        160,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_registry",
+          "writable": true
+        },
+        {
+          "name": "deal_terms"
+        },
+        {
+          "name": "buyer_clearance",
+          "writable": true
+        },
+        {
+          "name": "escrow_authority",
+          "docs": [
+            "Buyer signer whose Magic escrow funds settlement."
+          ],
+          "signer": true
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CommitMatchedOfferArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "refund_cancelled_listing_tokens",
+      "discriminator": [
+        200,
+        208,
+        50,
+        84,
+        39,
+        64,
+        110,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "asset_registry"
+        },
+        {
+          "name": "deal_terms"
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_escrow_authority"
+        },
+        {
+          "name": "token_escrow",
+          "writable": true
+        },
+        {
+          "name": "owner_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settle_payment",
+      "discriminator": [
+        129,
+        7,
+        163,
+        250,
+        122,
+        226,
+        158,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "asset_registry"
+        },
+        {
+          "name": "deal_terms"
+        },
+        {
+          "name": "payment_routing_policy"
+        },
+        {
+          "name": "seller_payout",
+          "writable": true
+        },
+        {
+          "name": "protocol_treasury",
+          "writable": true
+        },
+        {
+          "name": "operator_treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_escrow_authority"
+        },
+        {
+          "name": "token_escrow",
+          "writable": true
+        },
+        {
+          "name": "buyer_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "escrow_auth"
+        },
+        {
+          "name": "escrow",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SettlePaymentArgs"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "OfferMatched",
+      "discriminator": [
+        218,
+        183,
+        73,
+        208,
+        204,
+        233,
+        208,
+        180
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AssetAlreadySold",
+      "msg": "The asset has already been sold."
+    },
+    {
+      "code": 6001,
+      "name": "BidTooLow",
+      "msg": "The submitted bid is below the seller minimum."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidArgs",
+      "msg": "MatchOffer args could not be decoded."
+    },
+    {
+      "code": 6003,
+      "name": "BuyerNotCleared",
+      "msg": "Buyer has not been cleared for this transaction."
+    },
+    {
+      "code": 6004,
+      "name": "ClearanceMismatch",
+      "msg": "Clearance record does not match the buyer."
+    },
+    {
+      "code": 6005,
+      "name": "ClearanceExpired",
+      "msg": "Buyer clearance has expired."
+    },
+    {
+      "code": 6006,
+      "name": "PrivateBuyerMismatch",
+      "msg": "This private listing is reserved for a different buyer."
+    },
+    {
+      "code": 6007,
+      "name": "PositionNonTransferable",
+      "msg": "This vesting position is marked as non-transferable."
+    },
+    {
+      "code": 6008,
+      "name": "SettlementNotPrepared",
+      "msg": "This vesting position requires settlement attestation before matching."
+    },
+    {
+      "code": 6009,
+      "name": "SettlementBuyerMismatch",
+      "msg": "Settlement approval does not match the buyer."
+    },
+    {
+      "code": 6010,
+      "name": "SettlementExpired",
+      "msg": "Settlement approval has expired."
+    },
+    {
+      "code": 6011,
+      "name": "SettlementProofMissing",
+      "msg": "Settlement approval is missing a proof id."
+    },
+    {
+      "code": 6012,
+      "name": "SettlementPolicyVersionMismatch",
+      "msg": "Settlement approval was issued under a stale policy version."
+    },
+    {
+      "code": 6013,
+      "name": "SettlementPolicyDisabled",
+      "msg": "Settlement policy is disabled."
+    },
+    {
+      "code": 6014,
+      "name": "SettlementAttestorRevoked",
+      "msg": "Settlement attestor is no longer allowed by policy."
+    },
+    {
+      "code": 6015,
+      "name": "PaymentRoutingDisabled",
+      "msg": "Payment routing is disabled."
+    },
+    {
+      "code": 6016,
+      "name": "UnsupportedPaymentMode",
+      "msg": "Only native SOL payment routing is currently supported."
+    },
+    {
+      "code": 6017,
+      "name": "InvalidPaymentFeeConfiguration",
+      "msg": "Payment fee configuration is invalid."
+    },
+    {
+      "code": 6018,
+      "name": "SellerPayoutMismatch",
+      "msg": "Seller payout account does not match the current seller."
+    },
+    {
+      "code": 6019,
+      "name": "ProtocolTreasuryMismatch",
+      "msg": "Protocol treasury account does not match policy."
+    },
+    {
+      "code": 6020,
+      "name": "OperatorTreasuryMismatch",
+      "msg": "Operator treasury account does not match policy."
+    },
+    {
+      "code": 6021,
+      "name": "MissingProtocolTreasury",
+      "msg": "Protocol treasury is required by policy."
+    },
+    {
+      "code": 6022,
+      "name": "MissingOperatorTreasury",
+      "msg": "Operator treasury is required by policy."
+    },
+    {
+      "code": 6023,
+      "name": "ConsentNotPrepared",
+      "msg": "Issuer / admin transfer consent is still pending."
+    },
+    {
+      "code": 6024,
+      "name": "ConsentBuyerMismatch",
+      "msg": "Issuer / admin transfer consent does not match the buyer."
+    },
+    {
+      "code": 6025,
+      "name": "ConsentExpired",
+      "msg": "Issuer / admin transfer consent has expired."
+    },
+    {
+      "code": 6026,
+      "name": "BuyerNotSigner",
+      "msg": "Buyer must be the transaction signer."
+    },
+    {
+      "code": 6027,
+      "name": "TimestampRequired",
+      "msg": "A valid current timestamp is required (must be > 0)."
+    },
+    {
+      "code": 6028,
+      "name": "ClearanceEntityMismatch",
+      "msg": "Clearance is not scoped to this listing entity."
+    },
+    {
+      "code": 6029,
+      "name": "PaymentEscrowAuthorityMismatch",
+      "msg": "Magic escrow authority must match the matched buyer."
+    },
+    {
+      "code": 6030,
+      "name": "EscrowNotWritable",
+      "msg": "Magic escrow account must be writable."
+    },
+    {
+      "code": 6031,
+      "name": "EscrowNotSigner",
+      "msg": "Magic escrow account must be a signer."
+    },
+    {
+      "code": 6032,
+      "name": "AssetNotSold",
+      "msg": "The asset must be sold before payment settlement can run."
+    },
+    {
+      "code": 6033,
+      "name": "InvalidTokenProgram",
+      "msg": "Token program account is invalid."
+    },
+    {
+      "code": 6034,
+      "name": "InvalidTokenEscrowAuthority",
+      "msg": "Token escrow authority PDA is invalid."
+    },
+    {
+      "code": 6035,
+      "name": "TokenEscrowNotWritable",
+      "msg": "Token escrow account must be writable."
+    },
+    {
+      "code": 6036,
+      "name": "BuyerTokenAccountNotWritable",
+      "msg": "Buyer token account must be writable."
+    },
+    {
+      "code": 6037,
+      "name": "DealTermsMismatch",
+      "msg": "Deal terms account does not match the matched listing."
+    },
+    {
+      "code": 6038,
+      "name": "TokenAmountMismatch",
+      "msg": "Token amount does not match the listing deal terms."
+    },
+    {
+      "code": 6039,
+      "name": "InvalidTokenEscrowAccount",
+      "msg": "Token escrow account does not match the listing mint and escrow authority."
+    },
+    {
+      "code": 6040,
+      "name": "InvalidBuyerTokenAccount",
+      "msg": "Buyer token account does not match the matched buyer and listing mint."
+    },
+    {
+      "code": 6041,
+      "name": "OwnerNotSigner",
+      "msg": "Signer does not match the listing owner."
+    },
+    {
+      "code": 6042,
+      "name": "ListingNotInitialized",
+      "msg": "Listing has not been initialised."
+    },
+    {
+      "code": 6043,
+      "name": "TokenEscrowBalanceTooLow",
+      "msg": "Token escrow balance is below the listed token amount."
+    }
+  ],
+  "types": [
+    {
+      "name": "CommitMatchedOfferArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bid_price",
+            "type": "u64"
+          },
+          {
+            "name": "payment_routing_policy",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "operator_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "token_escrow_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_escrow_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_index",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OfferMatched",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "bid_price",
+            "type": "u64"
+          },
+          {
+            "name": "asset_type",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SettlePaymentArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bid_price",
+            "type": "u64"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

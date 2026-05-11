@@ -6,8 +6,16 @@ Render settings:
 
 - Service type: Web Service
 - Runtime: Node
-- Build command: `npm install`
-- Start command: `npm run dev:server`
+- Build command: `npm install && npm run build`
+- Start command: `npm run start`
+
+Before deploying, make sure the generated IDLs are included in the Git commit:
+
+- `target/idl/asset_registry.json`
+- `target/idl/deal_terms.json`
+- `target/idl/system_match_offer.json`
+
+The API imports these files at startup. A fresh Render clone will not contain local ignored build artifacts unless they are committed or regenerated during the build.
 
 Required environment variables:
 
@@ -22,10 +30,19 @@ Required environment variables:
 - `DEMO_SKIP_BUYER_CLEARANCE`: `true` for demo only
 - `DEMO_DISABLE_SPL_CREATE_ESCROW`: `true` for demo only
 - `PUBLISH_DEAL_TERMS_ONCHAIN`: `false`
-- `ASSET_REGISTRY_COMPONENT_ID`: `6BE4Z9G2WkEq8AEH89FgBDDxv5517MGM1pzuzF1pZSDe`
-- `DEAL_TERMS_COMPONENT_ID`: `5DTNmzUrHxbpGsj7C8U1YP1AtaHJF1qEEy2CT6W2vCqN`
-- `CREATE_LISTING_SYSTEM_ID`: `7rjyGnnFRacekAxByYLiq7sXLEjScKRCbtsdnz621yMT`
-- `MATCH_OFFER_SYSTEM_ID`: `EfyPjbjJ9hwuRixNH7bkT6yETnsTmEtqnQ7L3Erw9pyj`
+- `ASSET_REGISTRY_COMPONENT_ID`: `84rAQe7vMX8F8BevA9go8CWETc5FZJyKVgT5nowff81Z`
+- `DEAL_TERMS_COMPONENT_ID`: `23vDPBsuhfMEjmySL3p7DWTzXxX6j33xtaWj9VkbM5gg`
+- `PAYMENT_ROUTING_POLICY_COMPONENT_ID`: `Dwp5fQgx1CtVfUaPiQhEeKEr2RwXmkarJJxkMXDAw194`
+- `SETTLEMENT_AUTHORITY_POLICY_COMPONENT_ID`: `DxV3D2u8LPiJVZTJT7EkoovhXok4uzxZHwDznXmchHvG`
+- `BUYER_CLEARANCE_COMPONENT_ID`: `H9SDPiu38JtdPJaKueCnoAjjNBPHrfUxUgS95JPRPDM5`
+- `CREATE_LISTING_SYSTEM_ID`: `FgVyAJoCFkym9QjD8NsQ3SbHVkJEbECjYHJ7PpdetkCN`
+- `CANCEL_LISTING_SYSTEM_ID`: `AwvMZG7WWjUNzLVUZFa5JRoCHz6cJ1nu2zxTCi3xYgKc`
+- `ATTEST_VESTING_SETTLEMENT_SYSTEM_ID`: `BrACdZTWSwNSwFexzUcPtobEB5wxMHXxW3Q9GR5i63Rc`
+- `CONFIGURE_PAYMENT_ROUTING_SYSTEM_ID`: `Gnwd2U3g37AiZ5k4rphRnKHBx7UHujQupaE7XArMY8vt`
+- `CONFIGURE_SETTLEMENT_POLICY_SYSTEM_ID`: `7WTkuFXzdtYdFJGKnFB2oWrViVVpqqtsscULaQo4DXLq`
+- `ISSUE_CLEARANCE_SYSTEM_ID`: `2e7rfeRKU33mGe9ZLRwNTnDKf8yRJttqPcbXgjX4UXxK`
+- `ISSUE_TRANSFER_CONSENT_SYSTEM_ID`: `ERJNXy2po3hrkGEJ3XM7hvMg3k2jRP1emb32voWvPNU9`
+- `MATCH_OFFER_SYSTEM_ID`: `Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585`
 
 Optional:
 
