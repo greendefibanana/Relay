@@ -43,6 +43,7 @@ import initDcap, {
 import dotenv from "dotenv";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import nacl from "tweetnacl";
 import { assetTypeLabel, isVestingAssetType } from "./asset-types.js";
@@ -410,6 +411,17 @@ function loadKeypairFromEnv(envName: string): Keypair | null {
   }
   const bytes = JSON.parse(raw) as number[];
   return Keypair.fromSecretKey(Uint8Array.from(bytes));
+}
+
+function ensureAnchorWalletEnvFromKeypairJson(envName: string): void {
+  const raw = optionalEnv(envName);
+  if (!raw || process.env.ANCHOR_WALLET) {
+    return;
+  }
+
+  const walletPath = path.join(os.tmpdir(), `relay-${envName.toLowerCase()}.json`);
+  fs.writeFileSync(walletPath, raw, { mode: 0o600 });
+  process.env.ANCHOR_WALLET = walletPath;
 }
 
 type LoadedSigner = {
@@ -2275,6 +2287,7 @@ function resolveBuyerPubkey(): PublicKey {
 function runtimeWallet(): LocalWallet {
   const envKeypair = loadKeypairFromEnv("WALLET_KEYPAIR_JSON");
   if (envKeypair) {
+    ensureAnchorWalletEnvFromKeypairJson("WALLET_KEYPAIR_JSON");
     process.env.ANCHOR_PROVIDER_URL ??= env("SOLANA_RPC_URL", DEFAULT_SOLANA_RPC_URL);
     return new LocalWallet(envKeypair);
   }
