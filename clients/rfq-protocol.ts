@@ -778,7 +778,7 @@ async function readWorldMetadata(
 
 async function verifyTeeRpcIntegrityNode(rpcUrl: string): Promise<boolean> {
   const challengeBytes = Buffer.from(
-    Uint8Array.from(Array(32).fill(0).map(() => Math.floor(Math.random() * 256))),
+    Uint8Array.from(Array(64).fill(0).map(() => Math.floor(Math.random() * 256))),
   );
   const challenge = challengeBytes.toString("base64");
   const response = await fetch(`${rpcUrl}/quote?challenge=${encodeURIComponent(challenge)}`);

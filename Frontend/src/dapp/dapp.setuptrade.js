@@ -36,6 +36,7 @@ const INITIAL_STEPS = [
   { label: "Delegate to PER", sig: null, explorerUrl: null, status: "pending" },
   { label: "Execute in TEE / PER", sig: null, explorerUrl: null, status: "pending" },
   { label: "Finalize listing state", sig: null, explorerUrl: null, status: "pending" },
+  { label: "Anchor lister receipt on Solana", sig: null, explorerUrl: null, status: "pending" },
 ];
 
 /* ── Section card wrapper ─────────────────────────────────────────────────── */

@@ -269,9 +269,12 @@ pub mod system_match_offer {
             .get(COMPONENT_ACCOUNT_COUNT)
             .cloned()
             .ok_or_else(|| error!(MatchOfferError::BuyerNotCleared))?;
-        let buyer_clearance = {
+        let skip_buyer_clearance = buyer_clearance_account.key == &system_program::ID;
+        let buyer_clearance = if skip_buyer_clearance {
+            None
+        } else {
             let mut data: &[u8] = &buyer_clearance_account.try_borrow_data()?;
-            BuyerClearance::try_deserialize(&mut data)?
+            Some(BuyerClearance::try_deserialize(&mut data)?)
         };
 
         let payment_routing_policy_account = ctx
@@ -310,21 +313,23 @@ pub mod system_match_offer {
             .cloned()
             .ok_or_else(|| error!(MatchOfferError::SellerPayoutMismatch))?;
 
-        require!(buyer_clearance.is_cleared, MatchOfferError::BuyerNotCleared);
-        require!(
-            buyer_clearance.buyer == buyer,
-            MatchOfferError::ClearanceMismatch
-        );
-        require!(
-            buyer_clearance.listing_entity == Pubkey::default()
-                || buyer_clearance.listing_entity == listing_entity,
-            MatchOfferError::ClearanceEntityMismatch
-        );
-        if buyer_clearance.expires_at > 0 {
+        if let Some(buyer_clearance) = buyer_clearance {
+            require!(buyer_clearance.is_cleared, MatchOfferError::BuyerNotCleared);
             require!(
-                current_ts < buyer_clearance.expires_at,
-                MatchOfferError::ClearanceExpired
+                buyer_clearance.buyer == buyer,
+                MatchOfferError::ClearanceMismatch
             );
+            require!(
+                buyer_clearance.listing_entity == Pubkey::default()
+                    || buyer_clearance.listing_entity == listing_entity,
+                MatchOfferError::ClearanceEntityMismatch
+            );
+            if buyer_clearance.expires_at > 0 {
+                require!(
+                    current_ts < buyer_clearance.expires_at,
+                    MatchOfferError::ClearanceExpired
+                );
+            }
         }
 
         let asset_registry = &mut ctx.accounts.asset_registry;

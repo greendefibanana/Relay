@@ -1,7 +1,14 @@
-import { Transaction } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3030";
 const RELAY_ADMIN_TOKEN = process.env.REACT_APP_RELAY_ADMIN_TOKEN || "";
+const SOLANA_RPC_URL = process.env.REACT_APP_SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const SOLANA_EXPLORER = "https://explorer.solana.com";
+const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
 function base64ToUint8Array(base64) {
   var binary_string = window.atob(base64);
@@ -34,6 +41,46 @@ async function signPreparedPerTransaction(
   }
 
   return await signTransaction(transaction);
+}
+
+async function anchorListingReceiptOnSolana(listingId, seller, signTransaction) {
+  if (!seller || !listingId) {
+    return null;
+  }
+
+  const connection = new Connection(SOLANA_RPC_URL, "confirmed");
+  const feePayer = new PublicKey(seller);
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  const memo = `Relay listing created:${listingId}`;
+  const transaction = new Transaction({
+    feePayer,
+    recentBlockhash: latestBlockhash.blockhash,
+  }).add(
+    new TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: [],
+      data: new TextEncoder().encode(memo),
+    }),
+  );
+
+  transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+  const signed = await signTransaction(transaction);
+  const signature = await connection.sendRawTransaction(signed.serialize(), {
+    skipPreflight: false,
+  });
+  const confirmation = await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed",
+  );
+  if (confirmation.value.err) {
+    throw new Error(`Lister receipt transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+  }
+
+  return signature;
 }
 
 async function api(path, options = {}) {
@@ -92,13 +139,46 @@ export async function createListing(params, signTransaction) {
     const signedBase64 = uint8ArrayToBase64(signed.serialize({ requireAllSignatures: false }));
 
     console.log("Submitting to API...");
-    return await api("/api/listings/submit", {
+    const result = await api("/api/listings/submit", {
       method: "POST",
       body: JSON.stringify({
         listingId: prep.listingId,
         signedTransaction: signedBase64
       }),
     });
+
+    try {
+      const receiptSignature = await anchorListingReceiptOnSolana(
+        result?.listing?.tradeId || prep.listingId,
+        params.seller,
+        signTransaction,
+      );
+
+      if (receiptSignature) {
+        result.steps = [
+          ...(result.steps || []),
+          {
+            label: "Anchor lister receipt on Solana",
+            sig: receiptSignature,
+            explorerUrl: explorerUrl(receiptSignature, "tx"),
+          },
+        ];
+        result.note = `${result.note || "Listing created."} Lister receipt anchored on Solana.`;
+      }
+    } catch (receiptError) {
+      console.warn("Listing receipt anchor failed:", receiptError);
+      result.steps = [
+        ...(result.steps || []),
+        {
+          label: "Anchor lister receipt on Solana",
+          sig: "receipt-anchor-failed",
+          explorerUrl: null,
+        },
+      ];
+      result.note = `${result.note || "Listing created."} Listing was created, but the optional lister Solana receipt was not anchored.`;
+    }
+
+    return result;
   } catch (err) {
     console.error("Frontend RqF Error Trace:", err);
     throw err;
