@@ -45,7 +45,7 @@ const LandingPage = () => {
                     <div className="footer_left_c" >
                         c
                     </div>
-                    2023.RELAY
+                    2026.RELAY
                 </div>
 
                 <div className="footer_right" >

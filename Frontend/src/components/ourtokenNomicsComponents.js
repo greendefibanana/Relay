@@ -9,10 +9,10 @@ import {  motion } from 'framer-motion';
 const OurTokennomicsComponents = () => {
 
     const Details = [
-        { name: "Alex Rivers", role: "Lead Architect", detail: "15+ years in Systems Engineering. Specialized in Solana internals and BOLT ECS optimization." },
-        { name: "Sarah Chen", role: "Privacy Engineer", detail: "Expert in TEE enclaves and Zero-Knowledge proofs. Architect of the Relay Match Protocol." },
-        { name: "Marcus Thorne", role: "Product Strategy", detail: "Former Institutional Desk Lead. Bridging the gap between TradFi RFQ models and DeFi." },
-        { name: "Elena Vance", role: "Full-Stack Lead", detail: "UX specialist focused on high-performance trading interfaces and interactive Dapp experiences." },
+        { name: "Gani", role: "Cofounder and BD", detail: "" },
+        { name: "Victor", role: "Cofounder and Lead Architect", detail: "" },
+        { name: "Kei", role: "Community", detail: "" },
+        { name: "Macmillan", role: "Design", detail: "" },
     ]
 
     return (
