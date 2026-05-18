@@ -269,13 +269,12 @@ pub mod system_match_offer {
             .get(COMPONENT_ACCOUNT_COUNT)
             .cloned()
             .ok_or_else(|| error!(MatchOfferError::BuyerNotCleared))?;
-        let skip_buyer_clearance = buyer_clearance_account.key == &system_program::ID;
-        let buyer_clearance = if skip_buyer_clearance {
-            None
-        } else {
-            let mut data: &[u8] = &buyer_clearance_account.try_borrow_data()?;
-            Some(BuyerClearance::try_deserialize(&mut data)?)
-        };
+        require!(
+            buyer_clearance_account.key != &system_program::ID,
+            MatchOfferError::BuyerNotCleared
+        );
+        let mut buyer_clearance_data: &[u8] = &buyer_clearance_account.try_borrow_data()?;
+        let buyer_clearance = BuyerClearance::try_deserialize(&mut buyer_clearance_data)?;
 
         let payment_routing_policy_account = ctx
             .remaining_accounts
@@ -313,23 +312,21 @@ pub mod system_match_offer {
             .cloned()
             .ok_or_else(|| error!(MatchOfferError::SellerPayoutMismatch))?;
 
-        if let Some(buyer_clearance) = buyer_clearance {
-            require!(buyer_clearance.is_cleared, MatchOfferError::BuyerNotCleared);
+        require!(buyer_clearance.is_cleared, MatchOfferError::BuyerNotCleared);
+        require!(
+            buyer_clearance.buyer == buyer,
+            MatchOfferError::ClearanceMismatch
+        );
+        require!(
+            buyer_clearance.listing_entity == Pubkey::default()
+                || buyer_clearance.listing_entity == listing_entity,
+            MatchOfferError::ClearanceEntityMismatch
+        );
+        if buyer_clearance.expires_at > 0 {
             require!(
-                buyer_clearance.buyer == buyer,
-                MatchOfferError::ClearanceMismatch
+                current_ts < buyer_clearance.expires_at,
+                MatchOfferError::ClearanceExpired
             );
-            require!(
-                buyer_clearance.listing_entity == Pubkey::default()
-                    || buyer_clearance.listing_entity == listing_entity,
-                MatchOfferError::ClearanceEntityMismatch
-            );
-            if buyer_clearance.expires_at > 0 {
-                require!(
-                    current_ts < buyer_clearance.expires_at,
-                    MatchOfferError::ClearanceExpired
-                );
-            }
         }
 
         let asset_registry = &mut ctx.accounts.asset_registry;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   BadRequestError,
@@ -195,6 +196,21 @@ run("parseMatchBody and parseIssueClearanceBody validate integer inputs", () => 
       error instanceof BadRequestError &&
       error.message === "clearanceType must be one of: 1, 2, 3.",
   );
+});
+
+run("match_offer requires a real BuyerClearance component", () => {
+  const systemSource = fs.readFileSync(
+    "programs-ecs/systems/match_offer/src/lib.rs",
+    "utf8",
+  );
+  const clientSource = fs.readFileSync(
+    "clients/rfq-protocol.ts",
+    "utf8",
+  );
+
+  assert.match(systemSource, /buyer_clearance_account\.key != &system_program::ID/);
+  assert.doesNotMatch(systemSource, /skip_buyer_clearance/);
+  assert.doesNotMatch(clientSource, /DEMO_SKIP_BUYER_CLEARANCE|skipped-demo-clearance/);
 });
 
 if (failures > 0) {

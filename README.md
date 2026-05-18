@@ -50,6 +50,10 @@ Privacy without compliance is a liability. Relay enforces **Compliance-as-Code**
 
 Uncompromising privacy meeting unyielding compliance.
 
+### V1 Compliance Status
+
+Relay v1 uses an allowlisted buyer-clearance primitive: an authorized clearance issuer grants a buyer a clearance type, optional expiry, and optional listing scope before `match_offer` can execute. The demo and E2E flows may auto-issue this clearance for test wallets, but the protocol path still requires a real `BuyerClearance` component. Full external KYC provider integration is future work.
+
 ---
 
 ##  Running the Protocol Locally

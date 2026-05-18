@@ -3864,25 +3864,20 @@ export async function executeMatchOffer(
     ids.dealTermsComponentId,
     teeValidator,
   );
-  const skipBuyerClearance = process.env.DEMO_SKIP_BUYER_CLEARANCE === "true";
-  const buyerClearancePda = skipBuyerClearance
-    ? SystemProgram.programId
-    : await findOrCreateComponent(
-        provider,
-        state.buyerEntity,
-        ids.buyerClearanceComponentId,
-      );
-  const matchClearanceDelegateSignature = skipBuyerClearance
-    ? "skipped-demo-clearance"
-    : await delegateComponentAccount(
-        provider,
-        teeProvider.connection,
-        wallet.payer,
-        wallet.publicKey,
-        state.buyerEntity,
-        ids.buyerClearanceComponentId,
-        teeValidator,
-      );
+  const buyerClearancePda = await findOrCreateComponent(
+    provider,
+    state.buyerEntity,
+    ids.buyerClearanceComponentId,
+  );
+  const matchClearanceDelegateSignature = await delegateComponentAccount(
+    provider,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    state.buyerEntity,
+    ids.buyerClearanceComponentId,
+    teeValidator,
+  );
   const protocolFeeBps =
     paymentPolicy?.protocolFeeBps ??
     parseSafeInteger(
