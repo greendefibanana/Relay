@@ -5,7 +5,6 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3030";
-const RELAY_ADMIN_TOKEN = process.env.REACT_APP_RELAY_ADMIN_TOKEN || "";
 const SOLANA_RPC_URL = process.env.REACT_APP_SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const SOLANA_EXPLORER = "https://explorer.solana.com";
 const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -98,10 +97,6 @@ async function api(path, options = {}) {
   }
 
   return payload;
-}
-
-function adminHeaders() {
-  return RELAY_ADMIN_TOKEN ? { Authorization: `Bearer ${RELAY_ADMIN_TOKEN}` } : {};
 }
 
 export function explorerUrl(value, type = "address") {
@@ -219,7 +214,6 @@ export async function matchOffer(tradeId, params, signTransaction) {
 export async function attestVestingSettlement(tradeId, params) {
   return api(`/api/listings/${tradeId}/settlement-attest`, {
     method: "POST",
-    headers: adminHeaders(),
     body: JSON.stringify(params || {}),
   });
 }
@@ -227,7 +221,6 @@ export async function attestVestingSettlement(tradeId, params) {
 export async function issueTransferConsent(tradeId, params) {
   return api(`/api/listings/${tradeId}/consent`, {
     method: "POST",
-    headers: adminHeaders(),
     body: JSON.stringify(params || {}),
   });
 }
@@ -235,8 +228,28 @@ export async function issueTransferConsent(tradeId, params) {
 export async function issueClearance(params) {
   return api("/api/clearance", {
     method: "POST",
-    headers: adminHeaders(),
     body: JSON.stringify(params),
+  });
+}
+
+export async function requestClearance(params) {
+  return api("/api/clearance/request", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+export async function requestSettlementAttestation(tradeId, params) {
+  return api(`/api/listings/${tradeId}/settlement-attest/request`, {
+    method: "POST",
+    body: JSON.stringify(params || {}),
+  });
+}
+
+export async function requestTransferConsent(tradeId, params) {
+  return api(`/api/listings/${tradeId}/consent/request`, {
+    method: "POST",
+    body: JSON.stringify(params || {}),
   });
 }
 
@@ -245,8 +258,28 @@ export async function getClearanceStatus(buyer) {
   return payload.clearance || null;
 }
 
-export async function cancelListing(tradeId) {
-  return api(`/api/listings/${tradeId}`, { method: "DELETE", headers: adminHeaders() });
+export async function cancelListing(tradeId, params, signTransaction) {
+  if (!signTransaction) {
+    throw new Error("Wallet connection required to sign the cancellation transaction.");
+  }
+
+  const prep = await api(`/api/listings/${tradeId}/cancel/prepare`, {
+    method: "POST",
+    body: JSON.stringify(params || {}),
+  });
+  const signed = await signPreparedPerTransaction(
+    prep.transactionBase64,
+    signTransaction,
+  );
+  const signedBase64 = uint8ArrayToBase64(signed.serialize({ requireAllSignatures: false }));
+
+  return api(`/api/listings/${tradeId}/cancel/submit`, {
+    method: "POST",
+    body: JSON.stringify({
+      listingId: tradeId,
+      signedTransaction: signedBase64,
+    }),
+  });
 }
 
 export async function getProtocolStats(listings) {

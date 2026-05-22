@@ -113,6 +113,14 @@
     padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
+
+  &_hint {
+    margin: -0.4rem 0 1rem;
+    color: rgba(255, 255, 255, 0.48);
+    font-family: var(--raleway);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
 }
 
 // ── Clearance row ─────────────────────────────────────────────────────────────

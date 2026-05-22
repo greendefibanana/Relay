@@ -29,7 +29,7 @@ const StatCard = ({ label, value, icon: Icon, accent }) => (
 );
 
 const DashboardDapp = ({ closeHeader }) => {
-  const { enableWeb3, displayAccount, user_account } = useContext(AppContext);
+  const { enableWeb3, displayAccount, user_account, signTransaction } = useContext(AppContext);
 
   const [listings, setListings] = useState(null);
   const [clearance, setClearance] = useState(null);
@@ -60,8 +60,8 @@ const DashboardDapp = ({ closeHeader }) => {
   const handleCancel = async (tradeId) => {
     setCancelling(tradeId);
     try {
-      await cancelListing(tradeId);
-      setModal({ title: "Listing Cancelled", message: "Your listing has been removed from the secondary market." });
+      await cancelListing(tradeId, { seller: user_account }, signTransaction);
+      setModal({ title: "Listing Cancelled", message: "Your listing has been removed from the secondary market. To change terms, create a new listing with the updated details." });
       load();
     } catch (err) {
       setModal({ title: "Cancel Failed", message: err.message || "Failed to cancel listing." });
@@ -159,6 +159,11 @@ const DashboardDapp = ({ closeHeader }) => {
         {/* ── My Listings ── */}
         <div className="dash_section">
           <h6 className="dash_section_title">My Listings</h6>
+          {user_account && (
+            <p className="dash_section_hint">
+              To edit price or terms, cancel the active listing and create a new one.
+            </p>
+          )}
 
           {!user_account ? (
             <div className="dash_empty_state">
@@ -201,7 +206,7 @@ const DashboardDapp = ({ closeHeader }) => {
                     {!l.isSold && (
                       <button
                         className="dash_cancel_btn"
-                        disabled={cancelling === l.tradeId}
+                        disabled={cancelling === l.tradeId || !signTransaction}
                         onClick={() => handleCancel(l.tradeId)}
                       >
                         {cancelling === l.tradeId ? <Spinner size="sm" color="default" /> : "Cancel"}

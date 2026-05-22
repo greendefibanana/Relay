@@ -10,12 +10,12 @@ import TransactionImg from "../assets/images/transaction.png";
 import TxStatusPanel from "../components/TxStatusPanel";
 import PerBadge from "../components/PerBadge";
 import {
-  attestVestingSettlement,
   getClearanceStatus,
   getListing,
-  issueClearance,
-  issueTransferConsent,
   matchOffer,
+  requestClearance,
+  requestSettlementAttestation,
+  requestTransferConsent,
 } from "../lib/rfq-client";
 import ClearanceBadge from "../components/ClearanceBadge";
 
@@ -172,10 +172,8 @@ const TradeOtc = ({ closeHeader }) => {
     setClearanceSteps(initial);
 
     try {
-      const result = await issueClearance({
+      const result = await requestClearance({
         buyer: user_account,
-        clearanceType: 1,
-        expiresAt: "0",
         listingEntity: listing?.sellerEntity || null,
       });
       await runStepSequence({ result, setSteps: setClearanceSteps });
@@ -206,7 +204,7 @@ const TradeOtc = ({ closeHeader }) => {
     setApprovalSteps(initial);
 
     try {
-      const result = await attestVestingSettlement(tradeId, { buyer: user_account });
+      const result = await requestSettlementAttestation(tradeId, { buyer: user_account });
       await runStepSequence({ result, setSteps: setApprovalSteps });
       setApprovalLoading(false);
       setMessage({
@@ -235,7 +233,7 @@ const TradeOtc = ({ closeHeader }) => {
     setApprovalSteps(initial);
 
     try {
-      const result = await issueTransferConsent(tradeId, { buyer: user_account });
+      const result = await requestTransferConsent(tradeId, { buyer: user_account });
       await runStepSequence({ result, setSteps: setApprovalSteps });
       setApprovalLoading(false);
       setMessage({
@@ -424,6 +422,11 @@ const TradeOtc = ({ closeHeader }) => {
               <p>
                 DealTerms are stored confidentially inside the Private Ephemeral Rollup. Every placement requires buyer clearance, while vesting-backed listings can also require settlement preparation and issuer consent before matching. Successful matches now route native SOL atomically during settlement.
               </p>
+              {!listing.isSold && listing.owner === user_account && (
+                <p style={{ marginTop: "0.75rem" }}>
+                  Need to change price or terms? Cancel this listing from your dashboard, then relist with the updated details.
+                </p>
+              )}
             </div>
 
             {/* ── Pre-match checklist ── */}
