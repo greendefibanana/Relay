@@ -242,3 +242,29 @@ export function parseIssueClearanceBody(body: JsonBody): IssueClearanceInput {
     listingEntity: parseOptionalString(body.listingEntity, "listingEntity"),
   };
 }
+
+export function parseClearanceRequestBody(body: JsonBody): {
+  buyer: string;
+  listingEntity: string | null;
+} {
+  return {
+    buyer: parseRequiredString(body.buyer, "buyer"),
+    listingEntity: parseOptionalString(body.listingEntity, "listingEntity"),
+  };
+}
+
+export function parseCancelPrepareBody(body: JsonBody): { seller: string } {
+  return {
+    seller: parseRequiredString(body.seller, "seller"),
+  };
+}
+
+export function parseSignedTransactionBody(body: JsonBody): {
+  listingId: string;
+  signedTransaction: string;
+} {
+  return {
+    listingId: parseRequiredString(body.listingId, "listingId"),
+    signedTransaction: parseRequiredString(body.signedTransaction, "signedTransaction"),
+  };
+}

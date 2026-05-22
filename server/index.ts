@@ -15,12 +15,16 @@ import {
 } from "../clients/rfq-protocol.js";
 import {
   BadRequestError,
+  parseCancelPrepareBody,
+  parseClearanceRequestBody,
   parseConsentBody,
   parseCreateListingBody,
   parseIssueClearanceBody,
   parseMatchBody,
   parseSettlementAttestBody,
+  parseSignedTransactionBody,
 } from "./request-validation.js";
+import { evaluateKycRequest, isReviewModeEnabled } from "./kyc.js";
 
 const port = Number(process.env.PORT || process.env.API_PORT || "3030");
 const allowedOrigins = (process.env.RELAY_ALLOWED_ORIGIN || "http://localhost:3000")
@@ -100,6 +104,44 @@ function logApiError(error: unknown): void {
   } catch (logError) {
     console.error("Failed to write API error log:", logError);
   }
+}
+
+async function ensureReviewClearanceForSimpleMatch(
+  listingId: string,
+  buyer: string,
+): Promise<void> {
+  if (!isReviewModeEnabled()) {
+    return;
+  }
+
+  const listing = await getListingSnapshot(listingId);
+  if (!listing || listing.isSold) {
+    return;
+  }
+
+  const isSimpleReviewFlow =
+    listing.assetTypeId === 1 &&
+    listing.transferRestrictionMode === 0 &&
+    listing.settlementMode === 0 &&
+    (!listing.privateBuyer || listing.privateBuyer === buyer);
+  if (!isSimpleReviewFlow) {
+    return;
+  }
+
+  const clearance = await getClearanceStatus(buyer);
+  const alreadyCleared =
+    clearance?.isCleared &&
+    (!clearance.listingEntity || clearance.listingEntity === listing.sellerEntity);
+  if (alreadyCleared) {
+    return;
+  }
+
+  const decision = evaluateKycRequest(buyer);
+  await executeIssueClearance({
+    buyer: decision.buyer,
+    clearanceType: decision.clearanceType,
+    listingEntity: listing.sellerEntity,
+  });
 }
 
 const server = http.createServer(async (req, res) => {
@@ -201,9 +243,81 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/cancel\/prepare$/)) {
+      const id = url.pathname.split("/")[3];
+      const body = await readJsonBody(req);
+      const input = parseCancelPrepareBody(body);
+      const listing = await getListingSnapshot(id);
+      if (!listing) {
+        sendJson(res, 404, { error: "Listing not found" }, req);
+        return;
+      }
+      if (listing.isSold) {
+        throw new BadRequestError(`Listing ${id} is already sold and cannot be cancelled.`);
+      }
+      if (listing.owner !== input.seller) {
+        throw new UnauthorizedError("Only the listing owner can cancel this listing.");
+      }
+
+      let outBase64 = "";
+      const cancelPromise = new Promise<void>((resolvePrep, rejectPrep) => {
+        const executor = executeCancelListing(id, async (txBuf, listingId) => {
+          outBase64 = txBuf.toString("base64");
+          resolvePrep();
+          return new Promise<Buffer>((res, rej) => {
+            IN_FLIGHT_LISTINGS.set(`${listingId}_cancel`, {
+              resolveTx: res,
+              rejectTx: rej,
+              finalResult: executor,
+            });
+          });
+        });
+
+        executor.catch((e: Error) => {
+          if (!outBase64) rejectPrep(e);
+        });
+      });
+
+      await cancelPromise;
+      sendJson(res, 200, { listingId: id, transactionBase64: outBase64 });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/cancel\/submit$/)) {
+      const id = url.pathname.split("/")[3];
+      const body = await readJsonBody(req);
+      const { signedTransaction } = parseSignedTransactionBody({ ...body, listingId: id });
+      const flight = IN_FLIGHT_LISTINGS.get(`${id}_cancel`);
+      if (!flight) {
+        throw new BadRequestError(`No in-flight cancellation found for listing ${id}`);
+      }
+
+      flight.resolveTx(Buffer.from(signedTransaction, "base64"));
+      IN_FLIGHT_LISTINGS.delete(`${id}_cancel`);
+      const result = await flight.finalResult;
+      sendJson(res, 200, result);
+      return;
+    }
+
     if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/settlement-attest$/)) {
       requireAdmin(req);
       const id = url.pathname.split("/")[3];
+      const body = await readJsonBody(req);
+      const result = await executeAttestVestingSettlement(id, parseSettlementAttestBody(body));
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/settlement-attest\/request$/)) {
+      const id = url.pathname.split("/")[3];
+      const listing = await getListingSnapshot(id);
+      if (!listing) {
+        sendJson(res, 404, { error: "Listing not found" }, req);
+        return;
+      }
+      if (listing.isSold) {
+        throw new BadRequestError(`Listing ${id} is already sold.`);
+      }
       const body = await readJsonBody(req);
       const result = await executeAttestVestingSettlement(id, parseSettlementAttestBody(body));
       sendJson(res, 200, result);
@@ -219,6 +333,22 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/consent\/request$/)) {
+      const id = url.pathname.split("/")[3];
+      const listing = await getListingSnapshot(id);
+      if (!listing) {
+        sendJson(res, 404, { error: "Listing not found" }, req);
+        return;
+      }
+      if (listing.isSold) {
+        throw new BadRequestError(`Listing ${id} is already sold.`);
+      }
+      const body = await readJsonBody(req);
+      const result = await executeIssueTransferConsent(id, parseConsentBody(body));
+      sendJson(res, 200, result);
+      return;
+    }
+
     if (req.method === "POST" && url.pathname.match(/^\/api\/listings\/\d+\/match$/)) {
       throw new BadRequestError("Use /api/listings/:id/match/prepare and /api/listings/:id/match/submit directly.");
     }
@@ -227,6 +357,9 @@ const server = http.createServer(async (req, res) => {
       const id = url.pathname.split("/")[3];
       const body = await readJsonBody(req);
       const input = parseMatchBody(body);
+      if (input.buyer) {
+        await ensureReviewClearanceForSimpleMatch(id, input.buyer);
+      }
       
       let outListingId = id;
       let outBase64 = "";
@@ -287,6 +420,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/api/clearance/request") {
+      const body = await readJsonBody(req);
+      const request = parseClearanceRequestBody(body);
+      const decision = evaluateKycRequest(request.buyer);
+      const result = await executeIssueClearance({
+        buyer: decision.buyer,
+        clearanceType: decision.clearanceType,
+        listingEntity: request.listingEntity,
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
     notFound(res);
   } catch (error) {
     console.error("API Request Error:", error);
@@ -295,7 +441,9 @@ const server = http.createServer(async (req, res) => {
     const status =
       error instanceof BadRequestError || error instanceof UnauthorizedError
         ? error.statusCode
-        : 500;
+        : typeof (error as { statusCode?: unknown }).statusCode === "number"
+          ? (error as { statusCode: number }).statusCode
+          : 500;
     sendJson(res, status, { error: message }, req);
   }
 });
