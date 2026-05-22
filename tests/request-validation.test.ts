@@ -3,12 +3,16 @@ import fs from "node:fs";
 
 import {
   BadRequestError,
+  parseCancelPrepareBody,
+  parseClearanceRequestBody,
   parseConsentBody,
   parseCreateListingBody,
   parseIssueClearanceBody,
   parseMatchBody,
   parseSettlementAttestBody,
+  parseSignedTransactionBody,
 } from "../server/request-validation.ts";
+import { evaluateKycRequest, isReviewModeEnabled, KycRequestError } from "../server/kyc.ts";
 
 let failures = 0;
 
@@ -198,6 +202,111 @@ run("parseMatchBody and parseIssueClearanceBody validate integer inputs", () => 
   );
 });
 
+run("public request parsers require buyer, seller, and signed transactions", () => {
+  assert.deepEqual(parseClearanceRequestBody({ buyer: "buyer-1", listingEntity: "listing-1" }), {
+    buyer: "buyer-1",
+    listingEntity: "listing-1",
+  });
+  assert.deepEqual(parseCancelPrepareBody({ seller: "seller-1" }), {
+    seller: "seller-1",
+  });
+  assert.deepEqual(parseSignedTransactionBody({ listingId: "7", signedTransaction: "abc" }), {
+    listingId: "7",
+    signedTransaction: "abc",
+  });
+  assert.throws(
+    () => parseClearanceRequestBody({ buyer: "" }),
+    (error: unknown) =>
+      error instanceof BadRequestError && error.message === "buyer is required.",
+  );
+  assert.throws(
+    () => parseCancelPrepareBody({}),
+    (error: unknown) =>
+      error instanceof BadRequestError && error.message === "seller is required.",
+  );
+});
+
+run("KYC manual allowlist accepts and rejects buyers", () => {
+  const previousProvider = process.env.RELAY_KYC_PROVIDER;
+  const previousAllowlist = process.env.RELAY_KYC_ALLOWLIST;
+  const previousClearanceType = process.env.RELAY_KYC_DEFAULT_CLEARANCE_TYPE;
+
+  process.env.RELAY_KYC_PROVIDER = "manual";
+  process.env.RELAY_KYC_ALLOWLIST = "buyer-1,buyer-2";
+  process.env.RELAY_KYC_DEFAULT_CLEARANCE_TYPE = "2";
+
+  assert.deepEqual(evaluateKycRequest("buyer-2"), {
+    buyer: "buyer-2",
+    clearanceType: 2,
+  });
+  assert.throws(
+    () => evaluateKycRequest("buyer-3"),
+    (error: unknown) =>
+      error instanceof KycRequestError && error.message === "Buyer is not in RELAY_KYC_ALLOWLIST.",
+  );
+
+  if (previousProvider == null) delete process.env.RELAY_KYC_PROVIDER;
+  else process.env.RELAY_KYC_PROVIDER = previousProvider;
+  if (previousAllowlist == null) delete process.env.RELAY_KYC_ALLOWLIST;
+  else process.env.RELAY_KYC_ALLOWLIST = previousAllowlist;
+  if (previousClearanceType == null) delete process.env.RELAY_KYC_DEFAULT_CLEARANCE_TYPE;
+  else process.env.RELAY_KYC_DEFAULT_CLEARANCE_TYPE = previousClearanceType;
+});
+
+run("KYC mock provider requires explicit local opt-in", () => {
+  const previousProvider = process.env.RELAY_KYC_PROVIDER;
+  const previousMock = process.env.ALLOW_MOCK_KYC;
+
+  process.env.RELAY_KYC_PROVIDER = "mock";
+  delete process.env.ALLOW_MOCK_KYC;
+  assert.throws(
+    () => evaluateKycRequest("buyer-1"),
+    (error: unknown) =>
+      error instanceof KycRequestError && error.message === "Mock KYC requires ALLOW_MOCK_KYC=true.",
+  );
+
+  process.env.ALLOW_MOCK_KYC = "true";
+  assert.deepEqual(evaluateKycRequest("buyer-1"), {
+    buyer: "buyer-1",
+    clearanceType: 1,
+  });
+
+  if (previousProvider == null) delete process.env.RELAY_KYC_PROVIDER;
+  else process.env.RELAY_KYC_PROVIDER = previousProvider;
+  if (previousMock == null) delete process.env.ALLOW_MOCK_KYC;
+  else process.env.ALLOW_MOCK_KYC = previousMock;
+});
+
+run("review mode makes KYC optional for demos without allowlists", () => {
+  const previousProvider = process.env.RELAY_KYC_PROVIDER;
+  const previousReviewMode = process.env.RELAY_REVIEW_MODE;
+  const previousAllowlist = process.env.RELAY_KYC_ALLOWLIST;
+
+  process.env.RELAY_KYC_PROVIDER = "manual";
+  process.env.RELAY_REVIEW_MODE = "true";
+  delete process.env.RELAY_KYC_ALLOWLIST;
+
+  assert.equal(isReviewModeEnabled(), true);
+  assert.deepEqual(evaluateKycRequest("reviewer-wallet"), {
+    buyer: "reviewer-wallet",
+    clearanceType: 1,
+  });
+
+  process.env.RELAY_REVIEW_MODE = "false";
+  process.env.RELAY_KYC_PROVIDER = "review";
+  assert.deepEqual(evaluateKycRequest("reviewer-wallet"), {
+    buyer: "reviewer-wallet",
+    clearanceType: 1,
+  });
+
+  if (previousProvider == null) delete process.env.RELAY_KYC_PROVIDER;
+  else process.env.RELAY_KYC_PROVIDER = previousProvider;
+  if (previousReviewMode == null) delete process.env.RELAY_REVIEW_MODE;
+  else process.env.RELAY_REVIEW_MODE = previousReviewMode;
+  if (previousAllowlist == null) delete process.env.RELAY_KYC_ALLOWLIST;
+  else process.env.RELAY_KYC_ALLOWLIST = previousAllowlist;
+});
+
 run("match_offer requires a real BuyerClearance component", () => {
   const systemSource = fs.readFileSync(
     "programs-ecs/systems/match_offer/src/lib.rs",
@@ -211,6 +320,27 @@ run("match_offer requires a real BuyerClearance component", () => {
   assert.match(systemSource, /buyer_clearance_account\.key != &system_program::ID/);
   assert.doesNotMatch(systemSource, /skip_buyer_clearance/);
   assert.doesNotMatch(clientSource, /DEMO_SKIP_BUYER_CLEARANCE|skipped-demo-clearance/);
+});
+
+run("frontend does not expose admin tokens and token escrow is not demo-skipped", () => {
+  const frontendClient = fs.readFileSync("Frontend/src/lib/rfq-client.js", "utf8");
+  const protocolClient = fs.readFileSync("clients/rfq-protocol.ts", "utf8");
+
+  assert.doesNotMatch(frontendClient, /REACT_APP_RELAY_ADMIN_TOKEN/);
+  assert.doesNotMatch(protocolClient, /DEMO_DISABLE_SPL_CREATE_ESCROW|Skipping SPL token escrow|skipSplCreateEscrow/);
+});
+
+run("server exposes public request endpoints beside protected admin endpoints", () => {
+  const serverSource = fs.readFileSync("server/index.ts", "utf8");
+
+  assert.match(serverSource, /\/api\/clearance\/request/);
+  assert.match(serverSource, /ensureReviewClearanceForSimpleMatch/);
+  assert.match(fs.readFileSync("server/kyc.ts", "utf8"), /RELAY_REVIEW_MODE/);
+  assert.match(serverSource, /settlement-attest\\\/request/);
+  assert.match(serverSource, /consent\\\/request/);
+  assert.match(serverSource, /cancel\\\/prepare/);
+  assert.match(serverSource, /cancel\\\/submit/);
+  assert.match(serverSource, /requireAdmin\(req\);\s+const body = await readJsonBody\(req\);\s+const result = await executeIssueClearance/s);
 });
 
 if (failures > 0) {
