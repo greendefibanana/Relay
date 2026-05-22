@@ -282,6 +282,8 @@ export type FlowExecutionResult = {
   listing: ListingSnapshot | null;
 };
 
+type TransactionSignCallback = (txBuffer: Buffer, listingId: string) => Promise<Buffer>;
+
 class LocalWallet implements anchor.Wallet {
   constructor(readonly payer: Keypair) {}
 
@@ -2949,7 +2951,10 @@ export async function getListings(): Promise<ListingSnapshot[]> {
   return results.filter(Boolean) as ListingSnapshot[];
 }
 
-export async function executeCancelListing(listingId: string): Promise<FlowExecutionResult> {
+export async function executeCancelListing(
+  listingId: string,
+  signCallback?: TransactionSignCallback,
+): Promise<FlowExecutionResult> {
   const stored = getStoredState();
   if (!stored) throw new Error("No protocol state exists.");
 
@@ -2959,6 +2964,11 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
   }
   if (persistedListing.isSold) {
     throw new Error(`Listing ${listingId} is already sold and cannot be cancelled.`);
+  }
+  if (signCallback && persistedListing.tokenMint) {
+    throw new Error(
+      "Seller-signed cancellation for token-escrow listings requires a separate refund signature and is not supported by this endpoint yet.",
+    );
   }
 
   const wallet = runtimeWallet();
@@ -2971,9 +2981,10 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
     "OWNER_PUBKEY",
     wallet.payer,
   );
-  if (persistedListing.owner && ownerSigner.publicKey.toBase58() !== persistedListing.owner) {
+  if (persistedListing.owner && ownerSigner.publicKey.toBase58() !== persistedListing.owner && !signCallback) {
     throw new Error("cancel_listing requires OWNER_WALLET_PATH / OWNER_PUBKEY to match the listing owner.");
   }
+  const owner = new PublicKey(persistedListing.owner);
 
   let tokenRefundSignature: string | null = null;
   if (persistedListing.tokenMint) {
@@ -2981,7 +2992,7 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
     await ensureAssociatedTokenAccount(
       provider.connection,
       wallet.payer,
-      ownerSigner.publicKey,
+      owner,
       tokenMint,
     );
     tokenRefundSignature = await sendAndConfirmBaseTransaction(
@@ -2992,7 +3003,7 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
           matchOfferSystemId: ids.matchOfferSystemId,
           assetRegistry: state.assetRegistryPda,
           dealTerms: state.dealTermsPda,
-          owner: ownerSigner.publicKey,
+          owner,
           tokenMint,
         }),
       ),
@@ -3023,7 +3034,7 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
   );
 
   const applySystem = await ApplySystem({
-    authority: ownerSigner.publicKey,
+    authority: owner,
     world: state.world,
     systemId: ids.cancelListingSystemId,
     entities: [
@@ -3037,12 +3048,52 @@ export async function executeCancelListing(listingId: string): Promise<FlowExecu
     ],
     args: {},
   });
+  let cancelTransaction = applySystem.transaction;
+  let finalCancelSigners =
+    ownerSigner.publicKey.equals(wallet.publicKey) ? [] : [ownerSigner.keypair];
+
+  if (signCallback) {
+    cancelTransaction.feePayer = wallet.payer.publicKey;
+    if (isLocalEphemeralRpc(teeProvider.connection.rpcEndpoint)) {
+      const latestBlockhash = await teeProvider.connection.getLatestBlockhash("confirmed");
+      cancelTransaction.recentBlockhash = latestBlockhash.blockhash;
+      cancelTransaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+    } else {
+      const writableAccounts = getWritableAccounts(cancelTransaction);
+      const blockhashResponse = await fetch(teeProvider.connection.rpcEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getBlockhashForAccounts",
+          params: [writableAccounts],
+        }),
+      });
+      const blockhashBody = await blockhashResponse.json() as any;
+      if (!blockhashResponse.ok || blockhashBody.error) {
+        throw new Error(`Failed to fetch PER blockhash: ${JSON.stringify(blockhashBody)}`);
+      }
+      const blockhashValue = blockhashBody.result?.value ?? blockhashBody.result;
+      if (!blockhashValue?.blockhash || typeof blockhashValue.lastValidBlockHeight !== "number") {
+        throw new Error(`Unexpected PER blockhash response: ${JSON.stringify(blockhashBody)}`);
+      }
+      cancelTransaction.recentBlockhash = blockhashValue.blockhash;
+      cancelTransaction.lastValidBlockHeight = blockhashValue.lastValidBlockHeight;
+    }
+
+    const serialized = cancelTransaction.serialize({ requireAllSignatures: false });
+    const signedBuffer = await signCallback(serialized, listingId);
+    cancelTransaction = anchor.web3.Transaction.from(signedBuffer);
+    finalCancelSigners = [];
+  }
+
   const cancelSignature = await sendAndConfirmPerTransaction(
     teeProvider.connection,
     wallet.payer,
-    applySystem.transaction,
+    cancelTransaction,
     undefined,
-    ownerSigner.publicKey.equals(wallet.publicKey) ? [] : [ownerSigner.keypair],
+    finalCancelSigners,
   );
   const assetCommitSignature = await undelegateComponentAccount(
     provider.connection,
@@ -3187,16 +3238,6 @@ export async function executeCreateListing(
   const publishDealTermsOnChain = env("PUBLISH_DEAL_TERMS_ONCHAIN", "false") === "true";
   const keepAssetRegistryInPer = isVestingAssetType(normalizedInput.assetType);
   const createListingInputForChain: CreateListingInput = { ...normalizedInput };
-  const skipSplCreateEscrow =
-    process.env.DEMO_DISABLE_SPL_CREATE_ESCROW !== "false" &&
-    !isVestingAssetType(normalizedInput.assetType) &&
-    !!normalizedInput.tokenMint;
-  if (skipSplCreateEscrow) {
-    console.log(
-      `[demo] Skipping SPL token escrow inside create_listing PER transaction for mint ${normalizedInput.tokenMint}.`,
-    );
-    createListingInputForChain.tokenMint = null;
-  }
   const paymentPolicyState = await ensurePaymentRoutingConfigured(
     provider,
     teeProvider,
@@ -3455,9 +3496,7 @@ export async function executeCreateListing(
     world: state.world.toBase58(),
     assetRegistryPda: state.assetRegistryPda.toBase58(),
     dealTermsPda: state.dealTermsPda.toBase58(),
-    note: skipSplCreateEscrow
-      ? "Demo mode skipped SPL token escrow inside create_listing because PER cannot write base-layer token accounts on this devnet path; listing state was created on devnet/PER."
-      : keepAssetRegistryInPer
+    note: keepAssetRegistryInPer
         ? normalizedInput.recipient
           ? "Vesting listing was reserved for a designated buyer and keeps AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
           : "Vesting listings keep AssetRegistry delegated inside ER/PER until final settlement; DealTerms remain confidential there as well."
@@ -3525,6 +3564,7 @@ export async function executeAttestVestingSettlement(
       ? input.settlementExpiresAt
       : currentTimestamp + Number(optionalEnv("SETTLEMENT_EXPIRY_TTL_SECONDS") || "3600");
   const settlementProofId = input.settlementProofId ?? generateSettlementProofId();
+  const settlementNonce = input.settlementNonce ?? (persistedListing.settlementNonce ?? 0) + 1;
 
   await ensureApprovedSystem(provider, state.world, ids.attestVestingSettlementSystemId);
 
@@ -3569,6 +3609,7 @@ export async function executeAttestVestingSettlement(
     {
       ...input,
       settlementExpiresAt: resolvedSettlementExpiresAt,
+      settlementNonce,
       settlementProofId,
     },
   );
@@ -3596,7 +3637,7 @@ export async function executeAttestVestingSettlement(
     settlementAttestor: attestorSigner.publicKey.toBase58(),
     settlementStatus: 2,
     settlementExpiresAt: resolvedSettlementExpiresAt,
-    settlementNonce: input.settlementNonce ?? (persistedListing.settlementNonce ?? 0) + 1,
+    settlementNonce,
     settlementProofId,
     settlementPolicyVersion: settlementPolicy?.version ?? persistedListing.settlementPolicyVersion ?? 0,
     settlementPreparedAt: currentTimestamp,
@@ -3673,6 +3714,7 @@ export async function executeIssueTransferConsent(
   );
   const teeValidator = new PublicKey((await getClosestValidator(teeProvider.connection)).toBase58());
   const keepAssetRegistryInPer = true;
+  const consentNonce = input.consentNonce ?? (persistedListing.consentNonce ?? 0) + 1;
 
   await ensureApprovedSystem(provider, state.world, ids.issueTransferConsentSystemId);
 
@@ -3701,7 +3743,10 @@ export async function executeIssueTransferConsent(
     ids.assetRegistryComponentId,
     ids.dealTermsComponentId,
     consentSigner.publicKey,
-    input,
+    {
+      ...input,
+      consentNonce,
+    },
   );
   const consentPerSignature = await sendAndConfirmPerTransaction(
     teeProvider.connection,
@@ -3727,7 +3772,7 @@ export async function executeIssueTransferConsent(
     consentAuthority: consentSigner.publicKey.toBase58(),
     consentStatus: 2,
     consentExpiresAt: input.consentExpiresAt ?? persistedListing.consentExpiresAt ?? 0,
-    consentNonce: input.consentNonce ?? (persistedListing.consentNonce ?? 0) + 1,
+    consentNonce,
     updatedAt: new Date().toISOString(),
   };
   savePersistedState(toPersistedState(state, updatedListing));
@@ -4225,6 +4270,15 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
     buyerClearanceComponentId,
     teeValidator,
   );
+  const policyDelegateSignature = await delegateComponentAccount(
+    provider,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    settlementPolicyState.policyEntity,
+    ids.settlementAuthorityPolicyComponentId,
+    teeValidator,
+  );
 
   // Execute system
   const expiresAt = input.expiresAt ? parseInt(input.expiresAt, 10) : 0;
@@ -4265,6 +4319,14 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
     }
   }
 
+  const policyCommitSignature = await undelegateComponentAccount(
+    provider.connection,
+    teeProvider.connection,
+    wallet.payer,
+    wallet.publicKey,
+    settlementPolicyState.policyPda,
+    ids.settlementAuthorityPolicyComponentId,
+  );
   const commitSignature = "kept-delegated-in-per";
 
   const latestListingId = stored?.listings?.[stored.listings.length - 1]?.listingId ?? null;
@@ -4279,9 +4341,19 @@ export async function executeIssueClearance(input: IssueClearanceInput): Promise
         explorerUrl: solanaTxExplorerUrl(delegateSignature)
       },
       {
+        label: "Delegate settlement policy to PER",
+        sig: policyDelegateSignature,
+        explorerUrl: solanaTxExplorerUrl(policyDelegateSignature),
+      },
+      {
         label: "Execute issue_clearance in TEE/PER",
         sig: perSignature,
         explorerUrl: perTxExplorerUrl(perSignature)
+      },
+      {
+        label: "Commit settlement policy to Solana",
+        sig: policyCommitSignature,
+        explorerUrl: solanaTxExplorerUrl(policyCommitSignature),
       },
       {
         label: "Keep BuyerClearance confidential in ER/PER",
