@@ -12,6 +12,16 @@ AMMs are excellent for public liquidity. Relay is for trades where public intent
 
 Private terms can include minimum price, bid details, vesting schedules, buyer restrictions, block size, settlement constraints, and clearance data.
 
+## What is a shareable RFQ link?
+
+A shareable RFQ link is a direct URL to a Relay offer page. Sellers, treasuries, desks, or issuers can copy the link and send it to a buyer or market maker so the counterparty can review and match the offer without searching the market page.
+
+The link does not bypass protocol controls. Buyer clearance, reserved buyer checks, transfer consent, and settlement requirements still apply.
+
+## Should RFQ links be public?
+
+Only if the offer is intended for broad discovery. For sensitive OTC or private secondary workflows, distribute the link only to approved counterparties.
+
 ## What becomes public?
 
 Final settlement state and ownership updates can be committed to Solana through `AssetRegistry`.

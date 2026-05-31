@@ -12,6 +12,7 @@
 
 - [Private Secondary Market](product/private-secondary-market.md)
 - [Private OTC Desk](product/private-otc-desk.md)
+- [Shareable RFQ Links](product/shareable-rfq-links.md)
 - [Institutional Workflows](product/institutional-workflows.md)
 - [Supported Assets](product/supported-assets.md)
 

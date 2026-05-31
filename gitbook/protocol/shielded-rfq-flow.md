@@ -16,6 +16,27 @@ A seller creates a listing with terms such as:
 
 The listing creates or updates BOLT components used by the protocol.
 
+## Offer URL
+
+After a listing is created, Relay can expose a direct URL for that RFQ.
+
+The URL points to the placement detail page and can be shared with a buyer, desk, market maker, treasury counterparty, or issuer-approved participant.
+
+```text
+/trade_detail/:tradeId
+```
+
+The URL does not make private terms public. It routes the counterparty to the RFQ interface where the usual protocol checks still apply.
+
+```mermaid
+flowchart LR
+    Listing["Create listing"] --> URL["Generate RFQ URL"]
+    URL --> Share["Share with counterparty"]
+    Share --> Detail["Offer detail page"]
+    Detail --> Clearance["BuyerClearance / policy checks"]
+    Clearance --> Match["match_offer"]
+```
+
 ## Delegation
 
 Relay delegates the relevant component state to a Private Ephemeral Rollup.

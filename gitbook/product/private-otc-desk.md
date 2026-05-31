@@ -27,16 +27,26 @@ Relay creates a private RFQ environment for these workflows.
 ## OTC Flow
 
 1. A seller, treasury, or desk creates a private RFQ.
-2. Buyers or desks submit confidential bids.
-3. Relay checks eligibility and constraints inside the TEE.
-4. Matching logic executes privately.
-5. Settlement is committed atomically to Solana.
+2. Relay generates a shareable offer URL for direct counterparty distribution.
+3. Buyers or desks open the URL and submit confidential bids.
+4. Relay checks eligibility and constraints inside the TEE.
+5. Matching logic executes privately.
+6. Settlement is committed atomically to Solana.
+
+## Shareable OTC Links
+
+Every RFQ can behave like a portable deal room. A treasury can create an offer, copy the generated URL, and send it directly to a buyer, desk, or market maker.
+
+This mirrors how OTC markets already operate: relationship-driven distribution first, settlement after terms are agreed.
+
+The link routes counterparties directly to the offer page, but it does not bypass protocol controls. Buyer clearance, reserved buyer checks, transfer consent, and settlement requirements still apply before a match can execute.
 
 ## What Relay Adds
 
 - Reduced pre-trade information leakage.
 - Confidential buyer and seller matching.
 - Private price discovery.
+- Portable offer URLs for direct OTC distribution.
 - Atomic settlement.
 - Optional policy controls for fees, settlement authority, and buyer clearance.
 

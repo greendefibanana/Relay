@@ -26,9 +26,19 @@ Relay gives these transfers a private RFQ path.
 2. Relay creates the relevant BOLT entities and components.
 3. `DealTerms` stores private constraints such as minimum price, valuation cap, vesting schedule, and transfer restrictions.
 4. The listing is delegated into a Private Ephemeral Rollup.
-5. Buyers submit bids through the RFQ flow.
-6. The TEE evaluates buyer clearance and matching conditions.
-7. If matched, Relay settles atomically and updates the public `AssetRegistry`.
+5. Relay generates a shareable RFQ link for the listing.
+6. Buyers open the link or discover the listing from the market page.
+7. Buyers submit bids through the RFQ flow.
+8. The TEE evaluates buyer clearance and matching conditions.
+9. If matched, Relay settles atomically and updates the public `AssetRegistry`.
+
+## Direct Buyer Distribution
+
+Many private secondaries are not meant for broad discovery. A seller may already have a buyer, fund, desk, or issuer-approved counterparty in mind.
+
+Relay supports that behavior by giving each listing a direct offer URL. The seller can share the URL with the intended counterparty, who lands directly on the placement detail page.
+
+If the listing is reserved or requires clearance, the buyer still must satisfy those requirements before matching.
 
 ## What Stays Private
 

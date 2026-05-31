@@ -29,6 +29,8 @@ sequenceDiagram
     participant Solana as Solana
 
     Seller->>Relay: Create private listing
+    Relay-->>Seller: Generate shareable RFQ URL
+    Seller->>Buyer: Send offer link
     Relay->>TEE: Delegate DealTerms
     Buyer->>TEE: Submit confidential bid
     TEE->>TEE: Check BuyerClearance and policy
@@ -57,6 +59,7 @@ Relay's advantage is the combination:
 
 - Solana-native settlement.
 - Private RFQ negotiation.
+- Shareable offer URLs for direct counterparty distribution.
 - BOLT ECS split-state architecture.
 - MagicBlock Private Ephemeral Rollups.
 - TEE-backed matching.
