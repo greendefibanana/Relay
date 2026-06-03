@@ -3,6 +3,7 @@ import Logo from '../assets/images/logo.png';
 import { MdDehaze } from 'react-icons/md';
 import {Popover, PopoverTrigger, PopoverContent} from "@nextui-org/react";
 
+const DOCS_URL = "https://relay-6.gitbook.io/relayfinance/";
 
 const HeaderComponents = () => {
 
@@ -22,11 +23,11 @@ const HeaderComponents = () => {
                     fontSize:'1rem'
                 }} >Stake</Link>
 
-                    <a href="https://relay-2.gitbook.io/relay/" style={{
+                    <a href={DOCS_URL} target="_blank" rel="noreferrer" style={{
                     display:"block",
                     marginTop:".5rem",
                     fontSize:'1rem'
-                }} >Docs</a>
+                }} >Documentation</a>
 
                 <Link to={"/setuptrade"} className='header_wallet' style={{
                     display:"block",
@@ -51,12 +52,18 @@ const HeaderComponents = () => {
             <nav className='header_nav' >
                 <Link to={'/trades'} >Trade</Link>
                 <Link to={'/staking'} >Stake</Link>
-                <a href="https://relay-2.gitbook.io/relay/" >Docs</a>
+                <a href={DOCS_URL} target="_blank" rel="noreferrer" >Docs</a>
             </nav>
 
-            <Link to={"/setuptrade"} className='header_wallet' >
-                Open Dapp
-            </Link>
+            <div className="header_actions">
+                <a href={DOCS_URL} target="_blank" rel="noreferrer" className="header_docs">
+                    Documentation
+                </a>
+
+                <Link to={"/setuptrade"} className='header_wallet' >
+                    Open Dapp
+                </Link>
+            </div>
 
             <Popover key={'bottom-end'} placement={'bottom-end'} color="primary">
                 <PopoverTrigger>

@@ -51,6 +51,34 @@
 
     }
 
+    &_actions{
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+    }
+
+    &_docs{
+        border: 1px solid rgba(0,151,255,.45);
+        color: white;
+        font-size: .9rem;
+        font-family: var(--raleway);
+        font-weight: 700;
+        border-radius: 7px;
+        padding: .55rem 1.1rem;
+        background:
+            linear-gradient(#131416, #131416) padding-box,
+            linear-gradient(45deg, rgba(0,151,255,1), #7900D9) border-box;
+        box-shadow: 0 0 22px rgba(0,151,255,.12);
+        transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+
+        &:hover{
+            border-color: rgba(121,0,217,.75);
+            box-shadow: 0 0 26px rgba(121,0,217,.24);
+            transform: translateY(-1px);
+        }
+
+    }
+
     &_wallet{
         // border: 2px solid;
         border: none;
@@ -129,6 +157,10 @@
         }
 
         &_wallet{
+            display: none;
+        }
+
+        &_actions{
             display: none;
         }
 

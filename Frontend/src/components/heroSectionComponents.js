@@ -3,6 +3,8 @@ import roundImg from '../assets/images/hero_vector.png'
 import HeroSprial from '../assets/images/hero_spiral.png'
 import { Link } from 'react-router-dom';
 
+const DOCS_URL = "https://relay-6.gitbook.io/relayfinance/";
+
 const HeroSectionComponents = () => {
 
     return (
@@ -26,9 +28,20 @@ const HeroSectionComponents = () => {
 
                     </div>
 
-                        <Link to="/setuptrade" className="hero_section_main_center_btn" >
-                            Open Dapp
-                        </Link>
+                        <div className="hero_section_main_center_actions">
+                            <Link to="/setuptrade" className="hero_section_main_center_btn" >
+                                Open Dapp
+                            </Link>
+
+                            <a
+                                href={DOCS_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hero_section_main_center_docs"
+                            >
+                                Documentation
+                            </a>
+                        </div>
 
                 </div>
 
