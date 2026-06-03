@@ -14,7 +14,7 @@ const UsecasesComponents = () => {
             <div className="use_case_home_header" >
 
                 <h5>Protocol <span>Features</span>
-                
+
                     <img src={UnderlineImg} alt="underline" />
 
                 </h5>
@@ -38,9 +38,9 @@ const UsecasesComponents = () => {
                         <h5 className='use_case_home_Fpart_div_title' >BOLT ECS Architecture:</h5>
 
                         <h6>
-                            We’ve engineered a sophisticated state-split using the BOLT framework. 
-                            Public registries confirm asset existence, while sensitive deal terms—like strike prices 
-                            and vesting schedules—are encrypted and managed within private components.
+                            Relay uses BOLT ECS to split public ownership state from private deal logic.
+                            AssetRegistry records settlement state, while DealTerms keeps prices, caps,
+                            vesting schedules, block sizes, and buyer constraints inside private components.
                         </h6>
 
                     </div>
@@ -57,10 +57,9 @@ const UsecasesComponents = () => {
                         <h5 className='use_case_home_Fpart_div_title' >TEE-Based Whitelisting:</h5>
 
                         <h6>
-                            Institutional capital requires unyielding compliance. Relay introduces 
-                            programmatic BuyerClearance components. KYC and accreditation checks 
-                            are enforced inside the TEE before any match occurs, giving issuers 
-                            absolute control without public exposure.
+                            BuyerClearance components support issuer, treasury, and desk requirements
+                            before a match executes. KYC, accreditation, transfer restrictions, and
+                            counterparty eligibility can be evaluated inside the TEE without public exposure.
                         </h6>
 
                     </div>
@@ -80,13 +79,12 @@ const UsecasesComponents = () => {
                             </div>
                         </div>
 
-                        <h5 className='use_case_home_Fpart_div_title' >High-Volume "Dark" Trades:</h5>
+                        <h5 className='use_case_home_Fpart_div_title' >Private OTC Block Trades:</h5>
 
                         <h6>
-                            Relay enables native Dark Pools on Solana. Large institutional blocks 
-                            can be traded for SOL, JUP, or PYTH with zero market impact. 
-                            By keeping the negotiation "in the dark," we prevent slippage 
-                            and front-running.
+                            Relay supports confidential negotiation for liquid token blocks, treasury
+                            sales, whale-to-whale deals, and market maker/project OTC coordination.
+                            Counterparties can discover price without broadcasting size or intent.
                         </h6>
 
                     </div>
@@ -103,10 +101,10 @@ const UsecasesComponents = () => {
                         <h5 className='use_case_home_Fpart_div_title' >Instant On-Chain Finality:</h5>
 
                         <h6>
-                            Once a match is made inside our private rollup, Relay atomically 
-                            updates ownership on the Solana mainnet. The public sees the transfer, 
-                            but the specific terms remain permanently shielded. It’s the 
-                            ultimate combination of private negotiation and public trust.
+                            Once a match is made inside our private rollup, Relay atomically
+                            updates ownership on the Solana mainnet. The public sees the transfer,
+                            but the specific terms remain shielded. It combines confidential negotiation,
+                            reduced information leakage, and public settlement assurance.
                         </h6>
 
                     </div>

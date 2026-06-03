@@ -5,7 +5,7 @@ param (
 )
 
 if (-not $ProgramName -or -not $ProgramId) {
-    Write-Host "Usage: .\deploy_devnet.ps1 -ProgramName <name> -ProgramId <id> [-KeypairPath <path>]" -ForegroundColor Red
+    Write-Host "Usage: .\scripts\devnet\deploy-devnet.ps1 -ProgramName <name> -ProgramId <id> [-KeypairPath <path>]" -ForegroundColor Red
     exit 1
 }
 

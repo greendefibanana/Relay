@@ -6,25 +6,48 @@
 
     &_header{
         background-color: #111420;
-        padding: .5rem;
-        border-radius: 4px;
+        padding: .65rem .75rem;
+        border-radius: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         position: sticky;
         top: .5rem;
+        z-index: 10;
+        border: 1px solid rgba(255,255,255,0.06);
 
         &_spc{
             display: none;
+            align-items: center;
+
+            &_menu {
+                min-width: 44px;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
+                color: white;
+                background: transparent;
+                cursor: pointer;
+                transition: background-color 150ms ease-out, transform 100ms ease-out;
+
+                &:hover {
+                    background: rgba(255,255,255,0.06);
+                }
+
+                &:active {
+                    transform: translateY(1px);
+                }
+            }
         }
 
         & h5{
-            color: #292B36;
+            color: rgba(255,255,255,0.78);
             font-family: var(--syne);
-            font-size: 2rem;
-            letter-spacing: .1rem;
+            font-size: .94rem;
+            letter-spacing: .12rem;
             font-weight: 800;
-            // line-height: 20rem;
         }
 
         &_right{
@@ -58,6 +81,31 @@
                     padding: .5rem 2rem;
                     border-radius: 10px;
                     height: 100%;
+                    min-height: 40px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: .45rem;
+                    cursor: pointer;
+                    transition: background-color 150ms ease-out, transform 100ms ease-out;
+
+                    &:hover {
+                        background-color: #1C2235;
+                    }
+
+                    &:active {
+                        transform: translateY(1px);
+                    }
+
+                    &--connected {
+                        cursor: default;
+                        font-family: monospace;
+                        font-size: .82rem;
+
+                        &:hover {
+                            background-color: #161B2B;
+                        }
+                    }
                 
                 }
 
@@ -101,7 +149,12 @@
             // border: 1px solid red;
             padding: .5rem;
             border-radius: 5px;
-            transition: all .5s;
+            width: 100%;
+            background: transparent;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 150ms ease-out;
 
             & img{
                 margin-right: 1rem;
@@ -175,6 +228,9 @@
                 height: 100%;
                 display: flex;
                 align-items: center;
+                min-height: 40px;
+                cursor: pointer;
+                transition: background-color 150ms ease-out, transform 100ms ease-out;
 
                 &_ic{
                     margin-left: .5rem;
@@ -212,6 +268,10 @@
     width: 100%;
     min-width: unset;
     margin-bottom: 0;
+  }
+
+  .dapp_state {
+    grid-column: 1 / -1;
   }
 }
 
@@ -255,6 +315,7 @@
 
   &:focus-within {
     border-color: #0097FF;
+    box-shadow: 0 0 0 3px rgba(0,151,255,0.18);
   }
 
   &_ic {
@@ -297,7 +358,127 @@
     transform: rotate(90deg);
   }
 
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.wallet_status_dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #14F195;
+  box-shadow: 0 0 8px rgba(20,241,149,0.75);
+  flex-shrink: 0;
+}
+
+.dapp_state {
+  width: 100%;
+  border-radius: 12px;
+  padding: 1rem;
+  font-family: var(--raleway);
+
+  strong,
+  h5 {
+    display: block;
+    color: #FDFDFE;
+    font-family: var(--syne);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  p {
+    color: rgba(255,255,255,0.62);
+    font-size: .86rem;
+    line-height: 1.5;
+    margin: .5rem 0 0;
+    text-align: center;
+  }
+
+  a,
+  button {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    padding: .5rem .9rem;
+    font-family: var(--raleway);
+    font-size: .82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 100ms ease-out;
+
+    &:active {
+      transform: translateY(1px);
+    }
+  }
+
+  &--center {
+    max-width: 520px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  &--error {
+    background: rgba(255, 80, 80, 0.08);
+    border: 1px solid rgba(255, 80, 80, 0.22);
+
+    button {
+      margin-top: .8rem;
+      color: #fff;
+      background: rgba(255, 80, 80, 0.16);
+      border: 1px solid rgba(255, 80, 80, 0.36);
+    }
+  }
+
+  &--empty {
+    background: rgba(255,255,255,0.025);
+    border: 1px dashed rgba(255,255,255,0.12);
+  }
+}
+
+.dapp_state_actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+  margin-top: 1rem;
+
+  a {
+    color: #fff;
+    background: var(--linearBg);
+    text-decoration: none;
+  }
+
+  button {
+    color: #0097FF;
+    background: rgba(0,151,255,0.1);
+    border: 1px solid rgba(0,151,255,0.28);
+  }
+}
+
+.Otc_main_header_spc_menu:focus-visible,
+.Otc_main_header_right_wallet_center:focus-visible,
+.Otc_main_options_cov_btn:focus-visible,
+.Otc_main_modal_link:focus-visible,
+.otc_refresh_btn:focus-visible,
+.dash_refresh_btn:focus-visible,
+.setupTrade_title_right_switch:focus-visible,
+.setupTrade_btn:focus-visible,
+.setupTrade_helper_btn:focus-visible,
+.trade_copy_btn:focus-visible,
+.rfq_listing_card_btn:focus-visible,
+.rfq_listing_card_link:focus-visible,
+.dash_view_link:focus-visible,
+.dash_cancel_btn:focus-visible,
+.dash_cta_link:focus-visible,
+.dash_see_all_link:focus-visible,
+.trade_back_link:focus-visible,
+.dapp_state a:focus-visible,
+.dapp_state button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,151,255,0.38);
 }
 
 .modalBox{
@@ -316,7 +497,7 @@
     .Otc_main_header{
 
         & h5{
-            font-size: 1.6rem;
+            font-size: .88rem;
             letter-spacing: 1px;
         }
 
@@ -333,7 +514,7 @@
     .Otc_main_header{
 
         & h5{
-            font-size: 1.4rem;
+            font-size: .82rem;
             letter-spacing: 1px;
         }
 
@@ -387,7 +568,6 @@
 
    .Otc_main_header_spc{
         display: flex;
-        align-items: center;
 
         &_ic{
             color: white;
@@ -416,14 +596,26 @@
 
         &_left{
             width: 100%;
+            flex-wrap: wrap;
         }
 
         &_right{
             margin-top: 1.4rem;
             width: 100%;
-            // justify-content: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .75rem;
         }
 
+    }
+
+    .otc_search_bar {
+        width: 100%;
+        margin: .75rem 0 0;
+
+        &_input {
+            width: 100%;
+        }
     }
 }
 

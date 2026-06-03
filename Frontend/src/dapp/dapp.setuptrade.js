@@ -1,4 +1,4 @@
-import { BsIncognito } from "react-icons/bs";
+import { BsCheckLg, BsClipboard, BsIncognito } from "react-icons/bs";
 import { BiInfoCircle } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import { IoMdMenu } from "react-icons/io";
@@ -38,6 +38,11 @@ const INITIAL_STEPS = [
   { label: "Finalize listing state", sig: null, explorerUrl: null, status: "pending" },
   { label: "Anchor lister receipt on Solana", sig: null, explorerUrl: null, status: "pending" },
 ];
+
+const offerUrlFor = (tradeId) => {
+  if (!tradeId || typeof window === "undefined") return "";
+  return `${window.location.origin}/trade_detail/${tradeId}`;
+};
 
 /* ── Section card wrapper ─────────────────────────────────────────────────── */
 const SectionCard = ({ title, children }) => (
@@ -87,6 +92,8 @@ const SetuptradeDapp = ({ closeHeader }) => {
   const [txSteps, setTxSteps] = useState(null);
   const [txDone, setTxDone] = useState(false);
   const [txNote, setTxNote] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
 
   const isVestingAsset = VESTING_ASSET_TYPE_IDS.has(assetType.id);
   const requiresConsent = transferRestrictionMode === "1";
@@ -118,6 +125,17 @@ const SetuptradeDapp = ({ closeHeader }) => {
   const setPlus30Days = () => {
     const ts = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
     setSettlementExpiresAt(String(ts));
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1500);
+    } catch (_) {
+      setShareCopied(false);
+    }
   };
 
   const advanceStep = (index, sig, url) => {
@@ -167,6 +185,8 @@ const SetuptradeDapp = ({ closeHeader }) => {
     const steps = JSON.parse(JSON.stringify(INITIAL_STEPS));
     steps[0].status = "active";
     setTxSteps(steps);
+    setShareUrl("");
+    setShareCopied(false);
 
     // scroll to transaction panel
     setTimeout(() => txRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -200,11 +220,11 @@ const SetuptradeDapp = ({ closeHeader }) => {
 
       setTxSteps(result.steps.map((step) => ({ ...step, status: "done" })));
 
+      const createdTradeId = result?.listing?.tradeId || result?.listingId;
+      setShareUrl(offerUrlFor(createdTradeId));
       setTxNote(result.note);
       setTxDone(true);
       setisLoading(false);
-
-      setTimeout(() => navigate("/trades"), 4000);
     } catch (error) {
       setisLoading(false);
       setTxSteps(null);
@@ -459,6 +479,26 @@ const SetuptradeDapp = ({ closeHeader }) => {
                 />
               </div>
             )}
+
+            {shareUrl && (
+              <div className="setupTrade_share_card">
+                <div>
+                  <span className="setupTrade_share_card_label">Shareable RFQ link</span>
+                  <h6>Send this URL to a buyer, desk, market maker, or treasury counterparty.</h6>
+                </div>
+                <div className="setupTrade_share_card_url">
+                  <span>{shareUrl}</span>
+                  <button type="button" onClick={copyShareUrl} aria-label="Copy RFQ link">
+                    {shareCopied ? <BsCheckLg /> : <BsClipboard />}
+                    {shareCopied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <div className="setupTrade_share_card_actions">
+                  <Link to={shareUrl.replace(window.location.origin, "")}>Open offer</Link>
+                  <button type="button" onClick={() => navigate("/trades")}>View market</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -473,7 +513,7 @@ const SetuptradeDapp = ({ closeHeader }) => {
       {txDone && (
         <EditableSuccessModal
           closeModal={() => setTxDone(false)}
-          modal_message={`Your ${assetLabel} listing was created. DealTerms remain shielded in PER.`}
+          modal_message={`Your ${assetLabel} listing was created. Copy the RFQ link to share this offer directly with a counterparty.`}
           modal_title="Placement Created"
         />
       )}

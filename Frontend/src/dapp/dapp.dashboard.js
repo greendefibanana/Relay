@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { IoMdMenu } from "react-icons/io";
 import {
   BsArrowLeftRight,
   BsShieldCheck,
@@ -15,6 +14,7 @@ import { cancelListing, getClearanceStatus, getListings } from "../lib/rfq-clien
 import ClearanceBadge from "../components/ClearanceBadge";
 import PerBadge from "../components/PerBadge";
 import { EditableSuccessModal } from "../components/backDropComponent";
+import DappHeader from "../components/DappHeader";
 
 const StatCard = ({ label, value, icon: Icon, accent }) => (
   <div className="dash_stat_card" style={{ "--accent": accent }}>
@@ -34,11 +34,13 @@ const DashboardDapp = ({ closeHeader }) => {
   const [listings, setListings] = useState(null);
   const [clearance, setClearance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [cancelling, setCancelling] = useState(null);
   const [modal, setModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const data = await getListings();
       setListings(data);
@@ -46,7 +48,8 @@ const DashboardDapp = ({ closeHeader }) => {
         const cl = await getClearanceStatus(user_account);
         setClearance(cl);
       }
-    } catch {
+    } catch (err) {
+      setLoadError(err.message || "Could not load dashboard data.");
       setListings([]);
     } finally {
       setLoading(false);
@@ -83,38 +86,12 @@ const DashboardDapp = ({ closeHeader }) => {
   return (
     <div className="Otc_main">
       {/* ── Header ── */}
-      <div className="Otc_main_header">
-        <h5>DASHBOARD</h5>
-        <div className="Otc_main_header_spc">
-          <IoMdMenu
-            className="Otc_main_header_spc_ic"
-            style={{ cursor: "pointer" }}
-            onClick={closeHeader}
-          />
-          <Link className="Otc_main_header_spc_txt" to="/trades">
-            RELAY
-          </Link>
-        </div>
-        <div className="Otc_main_header_right">
-          <div className="Otc_main_header_right_live">
-            <div className="solana_dot" />
-            <h6>Solana Devnet</h6>
-          </div>
-          <div className="Otc_main_header_right_wallet otc_tophdvgt">
-            {displayAccount ? (
-              <div className="Otc_main_header_right_wallet_center">{displayAccount}</div>
-            ) : (
-              <div
-                className="Otc_main_header_right_wallet_center"
-                style={{ cursor: "pointer" }}
-                onClick={() => enableWeb3()}
-              >
-                Connect Wallet
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <DappHeader
+        title="DASHBOARD"
+        closeHeader={closeHeader}
+        displayAccount={displayAccount}
+        enableWeb3={enableWeb3}
+      />
 
       {/* ── Page body ── */}
       <div style={{ padding: "0 0.5rem" }}>
@@ -126,6 +103,14 @@ const DashboardDapp = ({ closeHeader }) => {
             <BsArrowRepeat size={16} />
           </button>
         </div>
+
+        {loadError && (
+          <div className="dapp_state dapp_state--error">
+            <strong>Could not refresh market data</strong>
+            <p>{loadError}</p>
+            <button type="button" onClick={load}>Try again</button>
+          </div>
+        )}
 
         {/* ── Stats ── */}
         {loading ? (
@@ -168,7 +153,7 @@ const DashboardDapp = ({ closeHeader }) => {
           {!user_account ? (
             <div className="dash_empty_state">
               <p>Connect your wallet to see your listings.</p>
-              <button className="setupTrade_btn" style={{ width: "auto", padding: "0.5rem 1.5rem" }} onClick={enableWeb3}>
+              <button type="button" className="setupTrade_btn" style={{ width: "auto", padding: "0.5rem 1.5rem" }} onClick={enableWeb3}>
                 Connect Wallet
               </button>
             </div>

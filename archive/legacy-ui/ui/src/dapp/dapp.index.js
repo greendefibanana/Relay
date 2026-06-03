@@ -254,7 +254,7 @@ function DappIndex({ component }) {
 
         <div className='dappIndex_right_btm' >
             <AiOutlineCopyrightCircle color='#FDFDFE' />
-            2023.RELAY
+            2026.RELAY
         </div>
 
       </div>

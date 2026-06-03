@@ -36,7 +36,8 @@ function resolveArtifactPath(date: Date): string {
   return path.join(
     process.cwd(),
     "artifacts",
-    `${relayEnvironment}-e2e-${sanitizedTimestamp(date)}.json`,
+    relayEnvironment,
+    `e2e-${sanitizedTimestamp(date)}.json`,
   );
 }
 

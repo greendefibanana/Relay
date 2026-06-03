@@ -1,3 +1,4 @@
+// Fetches and attempts to decode a MagicBlock World account on devnet.
 import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import fs from "fs";

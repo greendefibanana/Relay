@@ -2,7 +2,6 @@ import { BsChevronDown, BsIncognito, BsArrowRepeat } from "react-icons/bs";
 import { BiSearch } from "react-icons/bi";
 import { Popover, PopoverTrigger, PopoverContent } from "@nextui-org/react";
 import { Link } from "react-router-dom";
-import { IoMdMenu } from "react-icons/io";
 import { SuccessModal } from "../components/backDropComponent";
 import { useContext, useEffect, useState } from "react";
 import AppContext from "../context/Appcontext";
@@ -11,6 +10,7 @@ import TransactionImg from "../assets/images/transaction.png";
 import PerBadge from "../components/PerBadge";
 import { getListings } from "../lib/rfq-client";
 import { FiExternalLink } from "react-icons/fi";
+import DappHeader from "../components/DappHeader";
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -28,6 +28,7 @@ const OtcDapp = ({ closeHeader }) => {
 
   const [listings, setListings] = useState(null);
   const [LoadingTransactions, setLoadingTransactions] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showPrivate, setshowPrivate] = useState(false);
   const [successMsg, setsuccessMsg] = useState(false);
   const [Filters, setFilters] = useState("");
@@ -35,10 +36,12 @@ const OtcDapp = ({ closeHeader }) => {
 
   const loadListings = async () => {
     setLoadingTransactions(true);
+    setLoadError("");
     try {
       const data = await getListings();
       setListings(data);
-    } catch {
+    } catch (err) {
+      setLoadError(err.message || "Could not load placements.");
       setListings([]);
     } finally {
       setLoadingTransactions(false);
@@ -52,9 +55,9 @@ const OtcDapp = ({ closeHeader }) => {
   const filterContent = (
     <PopoverContent>
       <div className="Otc_main_modal">
-        <Link to="#" className="Otc_main_modal_link" onClick={() => setFilters("")}><h6>All Placements</h6></Link>
-        <Link to="#" className="Otc_main_modal_link" onClick={() => setFilters("active")}><h6>Active</h6></Link>
-        <Link to="#" className="Otc_main_modal_link" onClick={() => setFilters("matched")}><h6>Matched</h6></Link>
+        <button type="button" className="Otc_main_modal_link" onClick={() => setFilters("")}><h6>All Placements</h6></button>
+        <button type="button" className="Otc_main_modal_link" onClick={() => setFilters("active")}><h6>Active</h6></button>
+        <button type="button" className="Otc_main_modal_link" onClick={() => setFilters("matched")}><h6>Matched</h6></button>
       </div>
     </PopoverContent>
   );
@@ -74,27 +77,12 @@ const OtcDapp = ({ closeHeader }) => {
 
   return (
     <div className="Otc_main">
-      <div className="Otc_main_header">
-        <h5>SECONDARY MARKET</h5>
-
-        <div className="Otc_main_header_spc">
-          <IoMdMenu className="Otc_main_header_spc_ic" style={{ cursor: "pointer" }} onClick={closeHeader} />
-          <Link className="Otc_main_header_spc_txt" to="/trades">RELAY</Link>
-        </div>
-
-        <div className="Otc_main_header_right">
-          <div className="Otc_main_header_right_live">
-            <div className="solana_dot" />
-            <h6>Solana Devnet</h6>
-          </div>
-          <div className="Otc_main_header_right_wallet otc_tophdvgt">
-            {displayAccount
-              ? <div className="Otc_main_header_right_wallet_center">{displayAccount}</div>
-              : <div className="Otc_main_header_right_wallet_center" style={{ cursor: "pointer" }} onClick={() => enableWeb3()}>Connect Wallet</div>
-            }
-          </div>
-        </div>
-      </div>
+      <DappHeader
+        title="SECONDARY MARKET"
+        closeHeader={closeHeader}
+        displayAccount={displayAccount}
+        enableWeb3={enableWeb3}
+      />
 
       <h6 className="Otc_main_txt">Placements</h6>
 
@@ -132,14 +120,18 @@ const OtcDapp = ({ closeHeader }) => {
           </button>
 
           <h6>Show Shielded (PER)</h6>
-          <div
+          <button
+            type="button"
+            aria-pressed={showPrivate}
+            aria-label="Toggle shielded placements"
             className="setupTrade_title_right_switch"
-            style={{ display: "flex", justifyContent: showPrivate ? "flex-end" : "flex-start", transition: "all .4s" }}
+            style={{ display: "flex", justifyContent: showPrivate ? "flex-end" : "flex-start" }}
+            onClick={() => setshowPrivate(!showPrivate)}
           >
-            <div className="setupTrade_title_right_switch_div" style={{ transition: "all .4s" }} onClick={() => setshowPrivate(!showPrivate)}>
+            <span className="setupTrade_title_right_switch_div">
               <BsIncognito color="#373739" />
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -151,11 +143,21 @@ const OtcDapp = ({ closeHeader }) => {
             <SkeletonCard />
             <SkeletonCard />
           </>
+        ) : loadError ? (
+          <div className="dapp_state dapp_state--error dapp_state--center">
+            <strong>Could not load placements</strong>
+            <p>{loadError}</p>
+            <button type="button" onClick={loadListings}>Try again</button>
+          </div>
         ) : filtered.length === 0 ? (
-          <div style={{ width: "100%" }}>
+          <div className="dapp_state dapp_state--empty dapp_state--center">
             <img src={TransactionImg} alt="" style={{ width: "6rem", height: "6rem", objectFit: "contain", display: "block", margin: "3rem auto" }} />
-            <h5 style={{ color: "white", textAlign: "center" }}>No Placements Found</h5>
-            {search && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", fontFamily: "var(--raleway)", marginTop: "0.5rem" }}>Try clearing the search</p>}
+            <h5>No placements found</h5>
+            <p>{search ? "Try clearing the search or switch filters." : "Create a private agreement to seed the market."}</p>
+            <div className="dapp_state_actions">
+              {search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}
+              <Link to="/setuptrade">Create listing</Link>
+            </div>
           </div>
         ) : (
           filtered.map((listing, idx) => (

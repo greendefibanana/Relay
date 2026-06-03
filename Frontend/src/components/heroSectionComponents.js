@@ -17,7 +17,7 @@ const HeroSectionComponents = () => {
 
                         <h5>
                             Private Secondary Market for
-                            SAFTs, SAFEs, and vesting contracts powered 
+                            Tokens, SAFTs, SAFEs, and vesting contracts powered 
                             <h5 style={{position:"relative"}} >  by Solana PERs.
                                 <img src={roundImg} alt='vexxf' />
                             </h5>

@@ -1,5 +1,4 @@
 import { Link, useParams } from "react-router-dom";
-import { IoMdMenu } from "react-icons/io";
 import { BsClipboard, BsCheckLg } from "react-icons/bs";
 import { FiArrowLeft, FiExternalLink } from "react-icons/fi";
 import { EditableSuccessModal } from "../components/backDropComponent";
@@ -18,6 +17,7 @@ import {
   requestTransferConsent,
 } from "../lib/rfq-client";
 import ClearanceBadge from "../components/ClearanceBadge";
+import DappHeader from "../components/DappHeader";
 
 const MATCH_STEPS = [
   { label: "Delegate to PER", sig: null, explorerUrl: null, status: "pending" },
@@ -59,7 +59,7 @@ const transferRestrictionLabel = (mode) => {
 const isVestingAssetType = (assetTypeId) => assetTypeId === 2 || assetTypeId === 3;
 
 /* ── Clipboard Button ─────────────────────────────────────────────────────── */
-const CopyBtn = ({ text }) => {
+const CopyBtn = ({ text, label = null }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     try {
@@ -71,6 +71,7 @@ const CopyBtn = ({ text }) => {
   return (
     <button onClick={handleCopy} className="trade_copy_btn" title="Copy to clipboard">
       {copied ? <BsCheckLg size={12} color="#14F195" /> : <BsClipboard size={12} />}
+      {label && <span>{copied ? "Copied" : label}</span>}
     </button>
   );
 };
@@ -129,6 +130,7 @@ const TradeOtc = ({ closeHeader }) => {
   const [listing, setListing] = useState(null);
   const [clearance, setClearance] = useState(null);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [successMsg, setsuccessMsg] = useState(false);
   const [miniLoading, setminiLoading] = useState(false);
   const [clearanceLoading, setClearanceLoading] = useState(false);
@@ -141,12 +143,14 @@ const TradeOtc = ({ closeHeader }) => {
 
   const getListingData = useCallback(async () => {
     setLoadingTransactions(true);
+    setLoadError("");
     try {
       setListing(await getListing(tradeId));
       if (user_account) {
         setClearance(await getClearanceStatus(user_account));
       }
-    } catch {
+    } catch (err) {
+      setLoadError(err.message || "Could not load this placement.");
       setListing(null);
     } finally {
       setLoadingTransactions(false);
@@ -297,25 +301,16 @@ const TradeOtc = ({ closeHeader }) => {
   const needsSettlement =
     listing && isVestingAssetType(listing.assetTypeId) && (listing.settlementStatus ?? 0) < 2;
   const needsConsent = listing && listing.transferRestrictionMode === 1 && (listing.consentStatus ?? 0) < 2;
+  const offerUrl = typeof window === "undefined" ? "" : `${window.location.origin}/trade_detail/${tradeId}`;
 
   return (
     <div className="Otc_main">
-      <div className="Otc_main_header">
-        <h5>PLACEMENT DETAIL</h5>
-
-        <div className="Otc_main_header_spc">
-          <IoMdMenu className="Otc_main_header_spc_ic" style={{ cursor: "pointer" }} onClick={closeHeader} />
-          <Link className="Otc_main_header_spc_txt" to="/trades">RELAY</Link>
-        </div>
-
-        <div className="Otc_main_header_right">
-          <div className="Otc_main_header_right_wallet otc_tophdvgt">
-            {displayAccount
-              ? <div className="Otc_main_header_right_wallet_center">{displayAccount}</div>
-              : <div className="Otc_main_header_right_wallet_center" style={{ cursor: "pointer" }} onClick={() => enableWeb3()}>Connect Wallet</div>}
-          </div>
-        </div>
-      </div>
+      <DappHeader
+        title="PLACEMENT DETAIL"
+        closeHeader={closeHeader}
+        displayAccount={displayAccount}
+        enableWeb3={enableWeb3}
+      />
 
       {/* ── Back link ── */}
       <div style={{ padding: "1rem 1rem 0" }}>
@@ -332,10 +327,21 @@ const TradeOtc = ({ closeHeader }) => {
             <div style={{ height: "40vh", width: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
               <Spinner size="md" color="default" />
             </div>
+          ) : loadError ? (
+            <div className="dapp_state dapp_state--error dapp_state--center">
+              <strong>Could not load this placement</strong>
+              <p>{loadError}</p>
+              <div className="dapp_state_actions">
+                <button type="button" onClick={getListingData}>Try again</button>
+                <Link to="/trades">Back to market</Link>
+              </div>
+            </div>
           ) : (
-            <div style={{ width: "100%" }}>
+            <div className="dapp_state dapp_state--empty dapp_state--center">
               <img src={TransactionImg} alt="" style={{ width: "6rem", height: "6rem", objectFit: "contain", display: "block", margin: "3rem auto" }} />
-              <h5 style={{ color: "white", textAlign: "center" }}>No Placement Found</h5>
+              <h5>No placement found</h5>
+              <p>This RFQ may have been cancelled or the link is incomplete.</p>
+              <Link to="/trades">Back to market</Link>
             </div>
           )
         ) : (
@@ -427,6 +433,17 @@ const TradeOtc = ({ closeHeader }) => {
                   Need to change price or terms? Cancel this listing from your dashboard, then relist with the updated details.
                 </p>
               )}
+            </div>
+
+            <div className="rfq_share_card">
+              <div>
+                <label>Offer URL</label>
+                <p>Share this link with a buyer, desk, market maker, or treasury counterparty to route them directly to this RFQ.</p>
+              </div>
+              <div className="rfq_share_card_url">
+                <span>{offerUrl}</span>
+                <CopyBtn text={offerUrl} label="Copy link" />
+              </div>
             </div>
 
             {/* ── Pre-match checklist ── */}

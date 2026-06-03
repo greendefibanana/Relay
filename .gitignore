@@ -13,6 +13,7 @@ build/
 .local-programs/
 *.so
 *.zip
+*.tsbuildinfo
 
 # Solana Test Ledgers (Huge state files)
 test-ledger-*/
@@ -20,12 +21,16 @@ test-ledger-*/
 # Local State, Keys, and Secrets
 .env
 .devnet-*.json
+.relay-state.json
 .relay-state.*.json
 *-keypair.json
 **/keypair.json
+id.json
 
 # Logs & Temporary Files
 *.log
+*.err
+*.out
 api-crash-logs.txt
 ephemeral-*.err.log
 ephemeral-*.out.log
@@ -36,6 +41,8 @@ rpc_output.txt
 codex-session.jsonl
 history.txt
 skills.tar.gz
+.codex-logs/
+.solana-new-skills/
 
 # Misc
 .anchor/

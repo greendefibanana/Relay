@@ -1,3 +1,4 @@
+// Dumps recent devnet transaction logs for known buyer/seller addresses.
 const { Connection, PublicKey } = require('@solana/web3.js');
 const fs = require('fs');
 const conn = new Connection('https://api.devnet.solana.com');

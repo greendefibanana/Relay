@@ -15,7 +15,6 @@ const OurTokennomicsComponents = () => {
         { title: "Private Sale", percentage: '17.5%' },
         { title: "Public Sale", percentage: '19%' },
         { title: "Tresury", percentage: '10%' },
-        { title: "Team", percentage: '15%' },
 
     ]
 

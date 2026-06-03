@@ -47,7 +47,7 @@
                     justify-content: center;
                     border-radius: 400px;   
                     background-color: white;
-                transition: all .5s;
+                    transition: all .5s;
                 }
 
 
@@ -192,7 +192,7 @@
 @media (max-width:1225px){
 
     .setupTrade{
-        width: 70%;
+        width:70%;
     }
 
 }
@@ -201,7 +201,7 @@
 @media (max-width:1006px){
 
     .setupTrade{
-        width: 90%;
+        width:90%;
     }
 
 }
@@ -210,8 +210,8 @@
 @media (max-width:650px){
 
     .setupTrade{
-        width: 95%;
-        padding: 2rem 1rem;
+        width:95%;
+        padding:2rem 1rem;
     }
 
     .setupTrade_title{
@@ -478,11 +478,171 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  gap: 0.35rem;
   transition: border-color 0.2s, color 0.2s;
 
   &:hover {
     border-color: #0097FF;
     color: #0097FF;
+  }
+
+  span {
+    font-family: var(--raleway);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+}
+
+.setupTrade_share_card,
+.rfq_share_card {
+  margin-top: 1.25rem;
+  background: rgba(0, 151, 255, 0.07);
+  border: 1px solid rgba(0, 151, 255, 0.22);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.setupTrade_share_card {
+  &_label {
+    display: block;
+    font-family: var(--raleway);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0097FF;
+    margin-bottom: 0.35rem;
+  }
+
+  h6 {
+    color: rgba(255,255,255,0.72);
+    font-family: var(--raleway);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  &_url {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.9rem;
+    background: #0D1019;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.55rem;
+
+    span {
+      flex: 1;
+      min-width: 0;
+      color: rgba(255,255,255,0.78);
+      font-family: monospace;
+      font-size: 0.78rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-shrink: 0;
+      background: var(--linearBg);
+      border-radius: 7px;
+      color: white;
+      font-family: var(--raleway);
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.42rem 0.7rem;
+      min-height: 40px;
+      cursor: pointer;
+    }
+  }
+
+  &_actions {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+
+    a,
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      border-radius: 8px;
+      padding: 0.45rem 0.85rem;
+      font-family: var(--raleway);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    a {
+      background: rgba(20, 241, 149, 0.12);
+      border: 1px solid rgba(20, 241, 149, 0.28);
+      color: #14F195;
+      text-decoration: none;
+    }
+
+    button {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #BBBEC6;
+      cursor: pointer;
+    }
+  }
+}
+
+.rfq_share_card {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    color: #0097FF;
+    font-family: var(--raleway);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+
+  p {
+    color: rgba(255,255,255,0.58);
+    font-family: var(--raleway);
+    font-size: 0.78rem;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  &_url {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+    background: #0D1019;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.55rem;
+
+    > span {
+      flex: 1;
+      min-width: 0;
+      color: rgba(255,255,255,0.78);
+      font-family: monospace;
+      font-size: 0.78rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trade_copy_btn {
+      flex-shrink: 0;
+      min-height: 32px;
+      padding: 0.35rem 0.6rem;
+    }
   }
 }
 
@@ -510,5 +670,19 @@
     margin: 0;
     font-size: 0.8rem;
     color: rgba(201,169,255,0.7);
+  }
+}
+
+@media (max-width: 640px) {
+  .setupTrade_share_card_url,
+  .rfq_share_card_url {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .setupTrade_share_card_url button,
+  .rfq_share_card_url .trade_copy_btn {
+    justify-content: center;
+    width: 100%;
   }
 }

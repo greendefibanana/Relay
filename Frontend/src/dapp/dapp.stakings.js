@@ -1,8 +1,7 @@
-import { Link } from 'react-router-dom';
-import { IoMdMenu } from 'react-icons/io';
 import { BsClock } from 'react-icons/bs';
 import { useContext } from 'react';
 import AppContext from '../context/Appcontext';
+import DappHeader from '../components/DappHeader';
 
 const StakingPage = ({ closeHeader }) => {
   const { enableWeb3, displayAccount, user_account } = useContext(AppContext);
@@ -17,23 +16,12 @@ const StakingPage = ({ closeHeader }) => {
 
   return (
     <div className="Otc_main">
-      <div className="Otc_main_header">
-        <h5>STAKING</h5>
-
-        <div className="Otc_main_header_spc">
-          <IoMdMenu className="Otc_main_header_spc_ic" style={{ cursor: "pointer" }} onClick={closeHeader} />
-          <Link className="Otc_main_header_spc_txt" to="/trades">RELAY</Link>
-        </div>
-
-        <div className="Otc_main_header_right">
-          <div className="Otc_main_header_right_wallet otc_tophdvgt">
-            {displayAccount
-              ? <div className="Otc_main_header_right_wallet_center">{displayAccount}</div>
-              : <div className="Otc_main_header_right_wallet_center" style={{ cursor: "pointer" }} onClick={() => enableWeb3()}>Connect Wallet</div>
-            }
-          </div>
-        </div>
-      </div>
+      <DappHeader
+        title="STAKING"
+        closeHeader={closeHeader}
+        displayAccount={displayAccount}
+        enableWeb3={enableWeb3}
+      />
 
       <div className="Otc_main_body">
         {/* ── Coming Soon Banner ── */}

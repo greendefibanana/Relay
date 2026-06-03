@@ -24,7 +24,7 @@ const NAV_ITEMS = [
 ];
 
 const SideNavContent = ({ onLinkClick }) => {
-  const { enableWeb3, displayAccount, closeWeb3, UpdatesideNav } = useContext(AppContext);
+  const { enableWeb3, displayAccount, closeWeb3 } = useContext(AppContext);
 
   return (
     <>
@@ -61,24 +61,24 @@ const SideNavContent = ({ onLinkClick }) => {
 
         <div className='dappIndex_left_btm_wallet'>
           {displayAccount ? (
-            <div
+            <button
+              type="button"
               className='dappIndex_left_btm_wallet_center'
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               onClick={closeWeb3}
               title='Click to disconnect'
             >
               <BsBoxArrowRight size={13} style={{ flexShrink: 0 }} />
               {displayAccount}
-            </div>
+            </button>
           ) : (
-            <div
+            <button
+              type="button"
               className='dappIndex_left_btm_wallet_center'
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               onClick={() => { if (onLinkClick) onLinkClick(); enableWeb3(); }}
             >
               <BsBoxArrowInRight size={13} style={{ flexShrink: 0 }} />
               Enter Dark Pool
-            </div>
+            </button>
           )}
         </div>
       </div>

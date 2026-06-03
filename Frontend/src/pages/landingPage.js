@@ -49,27 +49,6 @@ const LandingPage = () => {
                 </div>
 
                 <div className="footer_right" >
-
-                    <Link to="/" >
-                        <img src={Medium} alt="medium" />
-                        <h5>Medium</h5>
-                    </Link>
-
-                    <Link to="/" >
-                        <img src={Telegram} alt="Telegram" />
-                        <h5>Telegram</h5>
-                    </Link>
-
-                    <Link to="/" >
-                        <img src={Twitter} alt="twitter" />
-                        <h5>Twitter</h5>
-                    </Link>
-
-                    <Link to="/" >
-                        <img src={Discord} alt="discord" />
-                        <h5>Discord</h5>
-                    </Link>
-
                 </div>
 
             </footer>

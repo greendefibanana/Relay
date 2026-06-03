@@ -7,20 +7,20 @@ import {  motion } from 'framer-motion';
 const MainpurposeComponents = () => {
 
     const Details = [
-        { 
-            img: LockImg, 
-            title: "Shielded Execution, Public Settlement", 
-            message: "Relay bridges the gap between the speed of Solana and the discretion of traditional finance. By utilizing Private Ephemeral Rollups (PERs), we enable users to negotiate and match orders in total privacy, revealing only the final ownership change on the public ledger. Your alpha stays yours." 
+        {
+            img: LockImg,
+            title: "Shielded Execution, Public Settlement",
+            message: "Relay connects Solana settlement with the discretion expected in institutional OTC markets. Private Ephemeral Rollups (PERs) let counterparties negotiate and match orders confidentially, revealing only the final ownership change on the public ledger."
         },
-        { 
-            img: VoteImg, 
-            title: "Solving the \"Locked Capital\" Trap", 
-            message: "Billions are trapped in private vesting contracts, SAFTs, and SAFEs. Relay transforms these illiquid assets into tradable positions. Sellers can liquidate portions of their holdings without signaling \"insider dumping\" to the public market, while buyers gain decentralized access to exclusive private terms." 
+        {
+            img: VoteImg,
+            title: "Secondary and OTC Liquidity",
+            message: "Relay supports private secondary markets for SAFTs, SAFEs, vested tokens, and locked allocations, while also supporting confidential block trades, treasury OTC sales, and whale-to-whale token deals."
         },
-        { 
-            img: BoostImg, 
-            title: "The Relay Match Protocol (RMP)", 
-            message: "We’ve moved the matching engine into high-speed, hardware-secured TEE enclaves. By processing orders off-chain in a \"Confidential Session,\" we eliminate front-running and MEV extraction entirely. Predators are starved, and users are protected by cryptographic execution guarantees." 
+        {
+            img: BoostImg,
+            title: "The Relay Match Protocol (RMP)",
+            message: "Relay moves RFQ matching into hardware-secured TEE enclaves. Projects, market makers, desks, and private buyers can coordinate pricing and allocations with reduced information leakage before atomic settlement on Solana."
         },
     ]
 
@@ -33,7 +33,7 @@ const MainpurposeComponents = () => {
                 <div className="our_purpose_home_header" >
 
                     <h5>Our <span>Main Purpose</span>
-                    
+
                         <img src={UnderlineImg} alt="underline" />
 
                     </h5>
@@ -46,9 +46,9 @@ const MainpurposeComponents = () => {
                     { Details.map( ( det, index ) => {
                         return (
 
-                            <motion.div 
+                            <motion.div
                                 key={index}
-                                className='our_purpose_home_main_div'  
+                                className='our_purpose_home_main_div'
                                 initial={{ scaleX: 0, transformOrigin: '0% 0%', }}
                                 whileInView={{ scaleX: 1, transformOrigin: '0% 0%' }}
                                 transition={{ duration: 0.4 }}

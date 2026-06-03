@@ -1,3 +1,9 @@
+$ErrorActionPreference = "Stop"
+
+# Emergency devnet redeploy helper for the match_offer system.
+# Prefer deploy-devnet.ps1 for normal program deployment; this script closes
+# stale buffers for a known operator wallet and retries an upgrade aggressively.
+
 $programId = "Cr4ZyqvML9tS5HeAFXLTKfBxJKixQStL8dGFmfbUx585"
 $soFile = "target/deploy/system_match_offer.so"
 $maxRetries = 20

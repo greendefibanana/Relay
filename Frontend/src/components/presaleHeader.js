@@ -9,17 +9,17 @@ const PresaleHeader = () => {
     const content = (
         <PopoverContent>
           <div className="px-1 py-2" >
-                    <Link to={'/staking'} style={{
+                    <Link to={'/'} style={{
                     display:"block",
                     marginTop:".5rem",
                     fontSize:'1rem'
                 }} >Website</Link>
 
-                    <a href="https://relay-2.gitbook.io/relay/" style={{
+                    <Link to={'/trades'} style={{
                     display:"block",
                     marginTop:".5rem",
                     fontSize:'1rem'
-                }} >Dapp</a>
+                }} >Dapp</Link>
           </div>
         </PopoverContent>
       );
@@ -35,13 +35,13 @@ const PresaleHeader = () => {
 
 
             <div>
-                <Link to={"/setuptrade"} className='presale_header_wallet2' style={{
+                <Link to={"/"} className='presale_header_wallet2' style={{
                     marginRight:'.5rem'
                 }} >
                     Website
                 </Link>
 
-                <Link to={"/setuptrade"} className='presale_header_wallet' >
+                <Link to={"/trades"} className='presale_header_wallet' >
                     Open Dapp
                 </Link>
             </div>

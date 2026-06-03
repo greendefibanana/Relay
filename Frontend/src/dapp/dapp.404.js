@@ -1,19 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { BiErrorCircle } from "react-icons/bi";
-import { IoMdMenu } from "react-icons/io";
+import DappHeader from "../components/DappHeader";
 
 const NotFoundDapp = ({ closeHeader }) => {
   return (
     <div className="Otc_main">
-      <div className="Otc_main_header">
-        <h5>404 NOT FOUND</h5>
-        <div className="Otc_main_header_spc">
-          <IoMdMenu className="Otc_main_header_spc_ic" style={{ cursor: "pointer" }} onClick={closeHeader} />
-          <Link className="Otc_main_header_spc_txt" to="/trades">RELAY</Link>
-        </div>
-        <div className="Otc_main_header_right" />
-      </div>
+      <DappHeader title="404 NOT FOUND" closeHeader={closeHeader} showNetwork={false} />
 
       <div className="Otc_main_body" style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
